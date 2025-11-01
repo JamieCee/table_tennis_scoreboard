@@ -17,15 +17,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   @override
   void initState() {
     super.initState();
+    // We need to wait for the first frame to be built before showing a dialog
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl = context.read<MatchController>();
       ctrl.onDoublesPlayersNeeded = _showPicker;
       ctrl.onServerSelectionNeeded = _showPicker;
 
-      // Initial check
-      if (ctrl.currentGame.isDoubles && ctrl.currentGame.homePlayers.isEmpty) {
-        _showPicker();
-      } else if (!ctrl.currentGame.isDoubles) {
+      // The controller calls _loadGame in its constructor. We need to check here
+      // if a picker needs to be shown for the very first game.
+      if (ctrl.currentServer == null) {
         _showPicker();
       }
     });
@@ -33,25 +33,25 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
   @override
   void dispose() {
-    final ctrl = context.read<MatchController>();
+    // Avoid trying to access context in dispose by using listen: false
+    final ctrl = Provider.of<MatchController>(context, listen: false);
     ctrl.onDoublesPlayersNeeded = null;
     ctrl.onServerSelectionNeeded = null;
     super.dispose();
   }
 
   void _showPicker() {
-    // Prevents showing dialog if one is already visible
-    if (ModalRoute.of(context)?.isCurrent != true) {
-      Navigator.of(context).pop();
+    // Check if a dialog is already open to prevent showing multiple dialogs.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => ChangeNotifierProvider.value(
+          value: context.read<MatchController>(),
+          child: const DoublesServerPicker(),
+        ),
+      );
     }
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: context.read<MatchController>(),
-        child: const DoublesServerPicker(),
-      ),
-    );
   }
 
   @override
@@ -110,12 +110,21 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                     "Set ${ctrl.currentGame.sets.length}",
                     style: const TextStyle(fontSize: 18, color: Colors.white54),
                   ),
-                  Text(
-                    "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
-                    "vs "
-                    "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
-                    style: const TextStyle(fontSize: 22, color: Colors.white),
-                  ),
+                  if (ctrl.currentGame.homePlayers.isNotEmpty ||
+                      ctrl.currentGame.awayPlayers.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(
+                        "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
+                        "vs "
+                        "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
+                        style: const TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                 ],
               ),
 
@@ -169,9 +178,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
               // Server indicator
               if (ctrl.currentServer != null && ctrl.currentReceiver != null)
-                Text(
-                  "🟢 Serving: ${ctrl.currentServer!.name} → ${ctrl.currentReceiver!.name}",
-                  style: const TextStyle(fontSize: 22, color: Colors.white70),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    "🟢 Serving: ${ctrl.currentServer!.name} → ${ctrl.currentReceiver!.name}",
+                    style: const TextStyle(fontSize: 22, color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
             ],
           ),
