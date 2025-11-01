@@ -4,6 +4,8 @@ import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
+import 'package:table_tennis_scoreboard/shared/styled_button.dart';
+import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 
 class TeamSetupScreen extends StatefulWidget {
   const TeamSetupScreen({super.key});
@@ -58,14 +60,33 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
             const SizedBox(height: 24),
             _teamInput("Away Team", _awayNameController, _awayPlayers),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
+
+            // StyledButton(
+            //   onPressed: _startMatch,
+            //   child: const Text(
+            //     "Start Match",
+            //     style: TextStyle(
+            //       color: Colors.white,
+            //       fontWeight: FontWeight.bold,
+            //       fontSize: 22,
+            //     ),
+            //   ),
+            //   // icon: const Icon(Icons.play_arrow),
+            // ),
+            StyledIconButton(
               onPressed: _startMatch,
-              label: const Text("Start Match"),
-              icon: const Icon(Icons.play_arrow),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
+              icon: const Icon(Icons.play_arrow, color: Colors.white),
+              child: const StyledButtonText('Start Game'),
             ),
+
+            // ElevatedButton.icon(
+            //   onPressed: _startMatch,
+            //   label: const Text("Start Match"),
+            //   icon: const Icon(Icons.play_arrow),
+            //   style: ElevatedButton.styleFrom(
+            //     minimumSize: const Size(double.infinity, 50),
+            //   ),
+            // ),
           ],
         ),
       ),

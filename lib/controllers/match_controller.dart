@@ -63,38 +63,56 @@ class MatchController extends ChangeNotifier {
     currentGame = games[index];
     currentSet = currentGame.sets.last;
 
-    if (currentGame.isDoubles && currentGame.homePlayers.isEmpty) {
-      currentServer = null;
-      currentReceiver = null;
-      onDoublesPlayersNeeded?.call();
-    } else if (currentGame.startingServer == null) {
-      currentServer = null;
-      currentReceiver = null;
-      onServerSelectionNeeded?.call();
+    // Reset common state
+    serveCount = 0;
+    deuce = false;
+    currentServer = null;
+    currentReceiver = null;
+
+    if (currentGame.isDoubles) {
+      // --- DOUBLES LOGIC ---
+      if (currentGame.homePlayers.isEmpty) {
+        // No doubles teams chosen yet
+        onDoublesPlayersNeeded?.call();
+        return;
+      }
+
+      if (currentGame.startingServer == null) {
+        // Teams chosen but no server yet
+        onServerSelectionNeeded?.call();
+        return;
+      }
     } else {
-      // Game has already started, so restore the server state.
-      _setFirstServerOfSet(); // This sets the server to the start of the current set.
+      // --- SINGLES LOGIC ---
+      if (currentGame.startingServer == null) {
+        onServerSelectionNeeded?.call();
+        return;
+      }
+    }
 
-      // Now, we determine the actual current server based on the score.
-      int totalPoints = currentSet.home + currentSet.away;
-      int tempServeCount = 0;
+    // --- RESTORE GAME STATE ---
+    _setFirstServerOfSet();
 
-      for (var i = 0; i < totalPoints; i++) {
-        tempServeCount++;
-        final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
-        final interval = isDeuce ? 1 : 2;
+    // Determine correct server rotation based on score
+    int totalPoints = currentSet.home + currentSet.away;
+    int tempServeCount = 0;
 
-        if (tempServeCount >= interval) {
-          tempServeCount = 0;
-          if (currentGame.isDoubles) {
-            _rotateDoublesServer();
-          } else {
-            _swapServerSingles();
-          }
+    for (var i = 0; i < totalPoints; i++) {
+      tempServeCount++;
+      final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
+      final interval = isDeuce ? 1 : 2;
+
+      if (tempServeCount >= interval) {
+        tempServeCount = 0;
+        if (currentGame.isDoubles) {
+          _rotateDoublesServer();
+        } else {
+          _swapServerSingles();
         }
       }
-      serveCount = tempServeCount;
     }
+
+    serveCount = tempServeCount;
     notifyListeners();
   }
 

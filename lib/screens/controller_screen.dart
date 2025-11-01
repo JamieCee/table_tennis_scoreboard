@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
 import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
+import 'package:table_tennis_scoreboard/shared/styled_button.dart';
+import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
@@ -73,36 +75,42 @@ class _ControllerScreenState extends State<ControllerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Game ${ctrl.currentGame.order} of ${ctrl.games.length}',
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              if (ctrl.currentGame.homePlayers.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    '${ctrl.currentGame.homePlayers.map((p) => p.name).join(" & ")} '
-                    'vs ${ctrl.currentGame.awayPlayers.map((p) => p.name).join(" & ")}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.center,
-                  ),
+              Center(
+                child: StyledHeading(
+                  'Game ${ctrl.currentGame.order} of ${ctrl.games.length}',
                 ),
+              ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _scoreColumn(
-                    'Home',
-                    ctrl.currentSet.home,
-                    ctrl.currentGame.setsWonHome,
-                  ),
-                  _scoreColumn(
-                    'Away',
-                    ctrl.currentSet.away,
-                    ctrl.currentGame.setsWonAway,
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: _scoreColumn(
+                        ctrl.currentGame.homePlayers
+                            .map((p) => p.name)
+                            .join(" & "),
+                        ctrl.currentSet.home,
+                        ctrl.currentGame.setsWonHome,
+                      ),
+                    ),
+                    const SizedBox(width: 8), // small spacing between columns
+                    Expanded(
+                      child: _scoreColumn(
+                        ctrl.currentGame.awayPlayers
+                            .map((p) => p.name)
+                            .join(" & "),
+                        ctrl.currentSet.away,
+                        ctrl.currentGame.setsWonAway,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -118,7 +126,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ],
               ),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -138,17 +145,22 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  if (ctrl.currentGame.order >
-                      1) // 👈 only show if not the first game
-                    ElevatedButton(
-                      onPressed: ctrl.previousGame,
-                      child: const Text('Previous Game'),
-                    ),
-                  ElevatedButton(
-                    onPressed: ctrl.isCurrentGameCompleted
-                        ? ctrl.nextGame
-                        : null,
-                    child: const Text('Next Game'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      if (ctrl.currentGame.order >
+                          1) // only show if not the first game
+                        ElevatedButton(
+                          onPressed: ctrl.previousGame,
+                          child: StyledButtonText('Previous'),
+                        ),
+                      ElevatedButton(
+                        onPressed: ctrl.isCurrentGameCompleted
+                            ? ctrl.nextGame
+                            : null,
+                        child: const StyledButtonText('Next Game'),
+                      ),
+                    ],
                   ),
                   if (ctrl.games.last.setsWonHome == 3 ||
                       ctrl.games.last.setsWonAway == 3)
@@ -167,9 +179,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
               ),
               const SizedBox(height: 20),
               Center(
-                child: Text(
+                child: StyledSubHeading(
                   'Match Score: ${ctrl.matchGamesWonHome} - ${ctrl.matchGamesWonAway}',
-                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
             ],
@@ -178,29 +189,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.grey[900],
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.refresh),
-            label: const Text("Reset App"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
-                (route) => false,
-              );
-
-              // By using a Future, we delay the reset until the next event
-              // loop, which allows the navigation to complete and this screen
-              // to be disposed of before the controller's state changes.
-              // Future(() => ctrl.reset());
-            },
-          ),
+        child: StyledIconButton(
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
+              (route) => false,
+            );
+          },
+          icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+          child: StyledButtonText("Reset App"),
         ),
       ),
     );
@@ -211,7 +209,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center, // ✅ centers multiline doubles names
+          softWrap: true, // ✅ allows wrapping for long names
+          overflow: TextOverflow.visible,
         ),
         Text('Points: $points', style: const TextStyle(fontSize: 22)),
         Text(
@@ -221,6 +222,22 @@ class _ControllerScreenState extends State<ControllerScreen> {
       ],
     );
   }
+
+  // Widget _scoreColumn(String label, int points, int sets) {
+  //   return Column(
+  //     children: [
+  //       Text(
+  //         label,
+  //         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  //       ),
+  //       Text('Points: $points', style: const TextStyle(fontSize: 22)),
+  //       Text(
+  //         'Sets: $sets',
+  //         style: const TextStyle(fontSize: 18, color: Colors.grey),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   void _showDoublesPlayerPicker(BuildContext context, MatchController ctrl) {
     List<Player> selectedHome = [];
