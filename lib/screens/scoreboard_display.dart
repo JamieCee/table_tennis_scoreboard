@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
+import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 import 'package:table_tennis_scoreboard/widgets/doubles_server_picker.dart';
 
 import '../controllers/match_controller.dart';
@@ -132,28 +133,100 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text(
-                    "${ctrl.currentSet.home}",
-                    style: const TextStyle(
-                      fontSize: 120,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent,
-                    ),
+                  // Home Column
+                  Column(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
+                        child:
+                            (ctrl.currentServer != null &&
+                                ctrl.currentServer!.name ==
+                                    ctrl.currentGame.homePlayers.first.name)
+                            ? const Icon(
+                                Icons.sports_tennis,
+                                key: ValueKey('homeBall'),
+                                size: 32,
+                                color: Colors.white,
+                              )
+                            : const SizedBox(
+                                key: ValueKey('homeEmpty'),
+                                height: 32,
+                              ),
+                      ),
+                      Text(
+                        "${ctrl.currentSet.home}",
+                        style: const TextStyle(
+                          fontSize: 120,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                    ],
                   ),
+
                   const Text(
                     "—",
                     style: TextStyle(fontSize: 100, color: Colors.white54),
                   ),
-                  Text(
-                    "${ctrl.currentSet.away}",
-                    style: const TextStyle(
-                      fontSize: 120,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.redAccent,
-                    ),
+
+                  // Away Column
+                  Column(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
+                        child:
+                            (ctrl.currentServer != null &&
+                                ctrl.currentServer!.name ==
+                                    ctrl.currentGame.awayPlayers.first.name)
+                            ? const Icon(
+                                Icons.sports_tennis,
+                                key: ValueKey('awayBall'),
+                                size: 32,
+                                color: Colors.white,
+                              )
+                            : const SizedBox(
+                                key: ValueKey('awayEmpty'),
+                                height: 32,
+                              ),
+                      ),
+                      Text(
+                        "${ctrl.currentSet.away}",
+                        style: const TextStyle(
+                          fontSize: 120,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+
+              // Debug button to see animations
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.center,
+              //   children: [
+              //     ElevatedButton(
+              //       onPressed: () {
+              //         final ctrl = context.read<MatchController>();
+              //         ctrl.addPointHome();
+              //       },
+              //       child: const Text("+ Home Point"),
+              //     ),
+              //     const SizedBox(width: 10),
+              //     ElevatedButton(
+              //       onPressed: () {
+              //         final ctrl = context.read<MatchController>();
+              //         ctrl.addPointAway();
+              //       },
+              //       child: const Text("+ Away Point"),
+              //     ),
+              //   ],
+              // ),
 
               // Sets summary
               Row(
@@ -180,10 +253,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
               if (ctrl.currentServer != null && ctrl.currentReceiver != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    "🟢 Serving: ${ctrl.currentServer!.name} → ${ctrl.currentReceiver!.name}",
-                    style: const TextStyle(fontSize: 22, color: Colors.white70),
-                    textAlign: TextAlign.center,
+                  child: StyledSubHeading(
+                    '${ctrl.currentServer!.name} is serving',
                   ),
                 ),
             ],
