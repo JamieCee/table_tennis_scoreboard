@@ -62,14 +62,38 @@ class MatchController extends ChangeNotifier {
   void _loadGame(int index) {
     currentGame = games[index];
     currentSet = currentGame.sets.last;
-    serveCount = 0;
-    currentServer = null;
-    currentReceiver = null;
 
     if (currentGame.isDoubles && currentGame.homePlayers.isEmpty) {
+      currentServer = null;
+      currentReceiver = null;
       onDoublesPlayersNeeded?.call();
-    } else {
+    } else if (currentGame.startingServer == null) {
+      currentServer = null;
+      currentReceiver = null;
       onServerSelectionNeeded?.call();
+    } else {
+      // Game has already started, so restore the server state.
+      _setFirstServerOfSet(); // This sets the server to the start of the current set.
+
+      // Now, we determine the actual current server based on the score.
+      int totalPoints = currentSet.home + currentSet.away;
+      int tempServeCount = 0;
+
+      for (var i = 0; i < totalPoints; i++) {
+        tempServeCount++;
+        final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
+        final interval = isDeuce ? 1 : 2;
+
+        if (tempServeCount >= interval) {
+          tempServeCount = 0;
+          if (currentGame.isDoubles) {
+            _rotateDoublesServer();
+          } else {
+            _swapServerSingles();
+          }
+        }
+      }
+      serveCount = tempServeCount;
     }
     notifyListeners();
   }
@@ -126,7 +150,6 @@ class MatchController extends ChangeNotifier {
 
       currentGame.sets.add(SetScore());
       currentSet = currentGame.sets.last;
-      serveCount = 0;
       deuce = false;
       _setFirstServerOfSet();
       notifyListeners();
@@ -134,21 +157,30 @@ class MatchController extends ChangeNotifier {
   }
 
   void _setFirstServerOfSet() {
+    final gameStartingServer = currentGame.startingServer;
+    final gameStartingReceiver = currentGame.startingReceiver;
+
+    if (gameStartingServer == null || gameStartingReceiver == null) return;
+
     if (currentGame.isDoubles) {
-      currentServer = currentGame.startingServer ?? currentGame.homePlayers[0];
-      currentReceiver =
-          currentGame.startingReceiver ?? currentGame.awayPlayers[0];
+      // In doubles, the player who was due to serve next will serve.
+      // This is a simplified model where the receiver of the last set serves to the partner of the server of the last set.
+      // For now, we just reset to the game's starting server which is a common house rule.
+      currentServer = gameStartingServer;
+      currentReceiver = gameStartingReceiver;
     } else {
+      // In singles, the server alternates each set.
       if ((currentGame.sets.length - 1) % 2 == 0) {
-        currentServer = currentGame.homePlayers.first;
-        currentReceiver = currentGame.awayPlayers.first;
+        // Sets 1, 3, 5
+        currentServer = gameStartingServer;
+        currentReceiver = gameStartingReceiver;
       } else {
-        currentServer = currentGame.awayPlayers.first;
-        currentReceiver = currentGame.homePlayers.first;
+        // Sets 2, 4
+        currentServer = gameStartingReceiver;
+        currentReceiver = gameStartingServer;
       }
     }
     serveCount = 0;
-    notifyListeners();
   }
 
   void setDoublesPlayers(List<Player> home, List<Player> away) {
@@ -158,12 +190,7 @@ class MatchController extends ChangeNotifier {
   }
 
   void setDoublesStartingServer(Player server, Player receiver) {
-    currentGame.startingServer = server;
-    currentGame.startingReceiver = receiver;
-    currentServer = server;
-    currentReceiver = receiver;
-    serveCount = 0;
-    notifyListeners();
+    setServer(server, receiver);
   }
 
   void _completeGame() {
@@ -175,12 +202,15 @@ class MatchController extends ChangeNotifier {
     if (currentGame.order < games.length) {
       _loadGame(currentGame.order);
     }
+    notifyListeners();
   }
 
   // ----------------------------------------------------
   // SERVING
   // ----------------------------------------------------
   void setServer(Player? p, Player? receiver) {
+    currentGame.startingServer = p;
+    currentGame.startingReceiver = receiver;
     currentServer = p;
     currentReceiver = receiver;
     serveCount = 0;
@@ -206,6 +236,10 @@ class MatchController extends ChangeNotifier {
   }
 
   void _rotateDoublesServer() {
+    if (currentGame.homePlayers.length < 2 ||
+        currentGame.awayPlayers.length < 2)
+      return;
+
     final h1 = currentGame.homePlayers[0];
     final h2 = currentGame.homePlayers[1];
     final a1 = currentGame.awayPlayers[0];
@@ -217,12 +251,16 @@ class MatchController extends ChangeNotifier {
       [h2, a2],
       [a2, h1],
     ];
+
     int currentIndex = sequence.indexWhere(
       (pair) => pair[0] == currentServer && pair[1] == currentReceiver,
     );
-    int nextIndex = (currentIndex + 1) % sequence.length;
-    currentServer = sequence[nextIndex][0];
-    currentReceiver = sequence[nextIndex][1];
+
+    if (currentIndex != -1) {
+      int nextIndex = (currentIndex + 1) % sequence.length;
+      currentServer = sequence[nextIndex][0];
+      currentReceiver = sequence[nextIndex][1];
+    }
   }
 
   void flipServerAndReceiver() {

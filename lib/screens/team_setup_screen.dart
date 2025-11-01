@@ -40,7 +40,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider(
           create: (_) => MatchController(home: home, away: away),
-          child: const ControllerScreen(),
+          child: const ControllerScreen(showDialogOnLoad: true),
         ),
       ),
     );

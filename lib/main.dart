@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
+import 'package:table_tennis_scoreboard/splash_screen.dart';
 
 void main() => runApp(MyApp());
 
@@ -9,7 +9,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Table Tennis Scoreboard',
       theme: ThemeData.dark(useMaterial3: true),
-      home: const TeamSetupScreen(),
+      home: const SplashScreen(),
+      // home: const TeamSetupScreen(),
     );
   }
 }
