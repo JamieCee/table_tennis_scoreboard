@@ -1,11 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
+import 'package:table_tennis_scoreboard/widgets/doubles_server_picker.dart';
 
 import '../controllers/match_controller.dart';
 
-class ScoreboardDisplayScreen extends StatelessWidget {
+class ScoreboardDisplayScreen extends StatefulWidget {
   const ScoreboardDisplayScreen({super.key});
+
+  @override
+  State<ScoreboardDisplayScreen> createState() =>
+      _ScoreboardDisplayScreenState();
+}
+
+class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctrl = context.read<MatchController>();
+      ctrl.onDoublesPlayersNeeded = _showPicker;
+      ctrl.onServerSelectionNeeded = _showPicker;
+
+      // Initial check
+      if (ctrl.currentGame.isDoubles && ctrl.currentGame.homePlayers.isEmpty) {
+        _showPicker();
+      } else if (!ctrl.currentGame.isDoubles) {
+        _showPicker();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    final ctrl = context.read<MatchController>();
+    ctrl.onDoublesPlayersNeeded = null;
+    ctrl.onServerSelectionNeeded = null;
+    super.dispose();
+  }
+
+  void _showPicker() {
+    // Prevents showing dialog if one is already visible
+    if (ModalRoute.of(context)?.isCurrent != true) {
+      Navigator.of(context).pop();
+    }
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<MatchController>(),
+        child: const DoublesServerPicker(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +85,6 @@ class ScoreboardDisplayScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Text(
-                "🏓 TABLE TENNIS SCOREBOARD",
-                style: TextStyle(fontSize: 24, color: Colors.white70),
-              ),
-
               // Team Names + Match Score
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -66,13 +108,13 @@ class ScoreboardDisplayScreen extends StatelessWidget {
                   Text(
                     "Game ${ctrl.currentGame.order} of ${ctrl.games.length} | "
                     "Set ${ctrl.currentGame.sets.length}",
-                    style: TextStyle(fontSize: 18, color: Colors.white54),
+                    style: const TextStyle(fontSize: 18, color: Colors.white54),
                   ),
                   Text(
                     "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
                     "vs "
                     "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
-                    style: TextStyle(fontSize: 22, color: Colors.white),
+                    style: const TextStyle(fontSize: 22, color: Colors.white),
                   ),
                 ],
               ),
@@ -83,19 +125,19 @@ class ScoreboardDisplayScreen extends StatelessWidget {
                 children: [
                   Text(
                     "${ctrl.currentSet.home}",
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 120,
                       fontWeight: FontWeight.bold,
                       color: Colors.blueAccent,
                     ),
                   ),
-                  Text(
+                  const Text(
                     "—",
                     style: TextStyle(fontSize: 100, color: Colors.white54),
                   ),
                   Text(
                     "${ctrl.currentSet.away}",
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 120,
                       fontWeight: FontWeight.bold,
                       color: Colors.redAccent,
@@ -110,11 +152,17 @@ class ScoreboardDisplayScreen extends StatelessWidget {
                 children: [
                   Text(
                     "${ctrl.currentGame.setsWonHome} Sets",
-                    style: TextStyle(fontSize: 36, color: Colors.blueAccent),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      color: Colors.blueAccent,
+                    ),
                   ),
                   Text(
                     "${ctrl.currentGame.setsWonAway} Sets",
-                    style: TextStyle(fontSize: 36, color: Colors.redAccent),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      color: Colors.redAccent,
+                    ),
                   ),
                 ],
               ),
@@ -123,7 +171,7 @@ class ScoreboardDisplayScreen extends StatelessWidget {
               if (ctrl.currentServer != null && ctrl.currentReceiver != null)
                 Text(
                   "🟢 Serving: ${ctrl.currentServer!.name} → ${ctrl.currentReceiver!.name}",
-                  style: TextStyle(fontSize: 22, color: Colors.white70),
+                  style: const TextStyle(fontSize: 22, color: Colors.white70),
                 ),
             ],
           ),
@@ -143,7 +191,10 @@ class ScoreboardDisplayScreen extends StatelessWidget {
             color: color,
           ),
         ),
-        Text("$score", style: TextStyle(fontSize: 32, color: Colors.white)),
+        Text(
+          "$score",
+          style: const TextStyle(fontSize: 32, color: Colors.white),
+        ),
       ],
     );
   }

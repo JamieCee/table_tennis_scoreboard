@@ -4,8 +4,8 @@ import 'set_score.dart';
 class Game {
   final int order;
   final bool isDoubles;
-  final List<Player> homePlayers;
-  final List<Player> awayPlayers;
+  List<Player> homePlayers;
+  List<Player> awayPlayers;
   List<SetScore> sets = [SetScore()];
   int setsWonHome = 0;
   int setsWonAway = 0;

@@ -79,13 +79,18 @@ class _ControllerScreenState extends State<ControllerScreen> {
               DropdownButtonFormField<Player>(
                 decoration: const InputDecoration(labelText: 'Receiver'),
                 value: selectedReceiver,
-                items:
-                    [
-                      ...ctrl.currentGame.homePlayers,
-                      ...ctrl.currentGame.awayPlayers,
-                    ].map((p) {
-                      return DropdownMenuItem(value: p, child: Text(p.name));
-                    }).toList(),
+                items: selectedServer == null
+                    ? [] // no options until server selected
+                    : (ctrl.currentGame.homePlayers.contains(selectedServer)
+                              ? ctrl
+                                    .currentGame
+                                    .awayPlayers // receiver must be from opposite team
+                              : ctrl.currentGame.homePlayers)
+                          .map(
+                            (p) =>
+                                DropdownMenuItem(value: p, child: Text(p.name)),
+                          )
+                          .toList(),
                 onChanged: (p) => setState(() => selectedReceiver = p),
               ),
             ],
