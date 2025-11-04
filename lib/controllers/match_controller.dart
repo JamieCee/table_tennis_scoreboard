@@ -6,6 +6,7 @@ import '../models/game.dart';
 import '../models/player.dart';
 import '../models/set_score.dart';
 import '../models/team.dart';
+import '../shared/configuration.dart';
 
 class MatchController extends ChangeNotifier {
   final Team home;
@@ -26,7 +27,9 @@ class MatchController extends ChangeNotifier {
   int serveCount = 0;
   bool deuce = false;
 
-  Duration breakDuration = const Duration(minutes: 2); // configurable
+  Duration breakDuration = Duration(
+    minutes: TableTennisConfig.setBreak,
+  ); // configurable
   Duration? remainingBreakTime;
   bool isBreakActive = false;
   Timer? _breakTimer;
