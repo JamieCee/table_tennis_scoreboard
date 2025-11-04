@@ -20,44 +20,36 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   @override
   void initState() {
     super.initState();
-    // We need to wait for the first frame to be built before showing a dialog
+
+    // Assign controller once
+    _ctrl = context.read<MatchController>();
+
+    // Set picker callbacks after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctrl = context.read<MatchController>();
+      _ctrl.onDoublesPlayersNeeded = _showPicker;
+      _ctrl.onServerSelectionNeeded = _showPicker;
 
-      ctrl.onDoublesPlayersNeeded = _showPicker;
-      ctrl.onServerSelectionNeeded = _showPicker;
-
-      // The controller calls _loadGame in its constructor. We need to check here
-      // if a picker needs to be shown for the very first game.
-      if (ctrl.currentServer == null) {
+      // Show picker if needed for the first game
+      if (_ctrl.currentServer == null) {
         _showPicker();
       }
     });
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Only assign once
-    _ctrl = Provider.of<MatchController>(context, listen: false);
-  }
-
-  @override
   void dispose() {
-    // Use the stored reference instead of Provider.of()
     _ctrl.onDoublesPlayersNeeded = null;
     _ctrl.onServerSelectionNeeded = null;
     super.dispose();
   }
 
   void _showPicker() {
-    // Check if a dialog is already open to prevent showing multiple dialogs.
     if (ModalRoute.of(context)?.isCurrent == true) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => ChangeNotifierProvider.value(
-          value: context.read<MatchController>(),
+          value: _ctrl,
           child: const DoublesServerPicker(),
         ),
       );
@@ -66,7 +58,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = context.watch<MatchController>();
+    final ctrl = context
+        .watch<MatchController>(); // rebuilds on notifyListeners()
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -80,7 +73,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => ChangeNotifierProvider.value(
-                    value: Provider.of<MatchController>(context, listen: false),
+                    value: ctrl,
                     child: const ControllerScreen(),
                   ),
                 ),
@@ -112,31 +105,50 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 ],
               ),
 
-              // Game info
-              Column(
-                children: [
-                  Text(
-                    "Game ${ctrl.currentGame.order} of ${ctrl.games.length} | "
-                    "Set ${ctrl.currentGame.sets.length}",
-                    style: const TextStyle(fontSize: 18, color: Colors.white54),
-                  ),
-                  if (ctrl.currentGame.homePlayers.isNotEmpty ||
-                      ctrl.currentGame.awayPlayers.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text(
-                        "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
-                        "vs "
-                        "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
-                        style: const TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
+              // Break timer
+              if (ctrl.isBreakActive)
+                Column(
+                  children: [
+                    const Text(
+                      "Set Break",
+                      style: TextStyle(fontSize: 36, color: Colors.white70),
+                    ),
+                    Text(
+                      "${ctrl.remainingBreakTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+                      "${ctrl.remainingBreakTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
+                      style: const TextStyle(fontSize: 72, color: Colors.white),
+                    ),
+                  ],
+                )
+              else
+                // Game info
+                Column(
+                  children: [
+                    Text(
+                      "Game ${ctrl.currentGame.order} of ${ctrl.games.length} | "
+                      "Set ${ctrl.currentGame.sets.length}",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white54,
                       ),
                     ),
-                ],
-              ),
+                    if (ctrl.currentGame.homePlayers.isNotEmpty ||
+                        ctrl.currentGame.awayPlayers.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text(
+                          "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
+                          "vs "
+                          "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
+                          style: const TextStyle(
+                            fontSize: 22,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                  ],
+                ),
 
               // Big Score
               Row(
@@ -214,28 +226,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   ),
                 ],
               ),
-
-              // Debug button to see animations
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     ElevatedButton(
-              //       onPressed: () {
-              //         final ctrl = context.read<MatchController>();
-              //         ctrl.addPointHome();
-              //       },
-              //       child: const Text("+ Home Point"),
-              //     ),
-              //     const SizedBox(width: 10),
-              //     ElevatedButton(
-              //       onPressed: () {
-              //         final ctrl = context.read<MatchController>();
-              //         ctrl.addPointAway();
-              //       },
-              //       child: const Text("+ Away Point"),
-              //     ),
-              //   ],
-              // ),
 
               // Sets summary
               Row(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -21,16 +23,17 @@ class ControllerScreen extends StatefulWidget {
 
 class _ControllerScreenState extends State<ControllerScreen> {
   late final MatchController _ctrl;
+  Timer? _breakTimer;
 
   @override
   void initState() {
     super.initState();
     _ctrl = context.read<MatchController>();
-    // Defer the execution until after the first frame is built.
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // Register the callbacks that the controller will use to show dialogs.
+      // Register callbacks for doubles and server selection
       _ctrl.onDoublesPlayersNeeded = () {
         if (!mounted) return;
         _showDoublesPlayerPicker(context, _ctrl);
@@ -40,6 +43,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
         _showServerReceiverPicker(context, _ctrl);
       };
 
+      // Show picker on load if requested
       if (widget.showDialogOnLoad) {
         if (_ctrl.currentGame.isDoubles &&
             _ctrl.currentGame.homePlayers.isEmpty) {
@@ -53,15 +57,32 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
   @override
   void dispose() {
-    // Clear the callbacks to prevent them from being called on a disposed widget.
+    _breakTimer?.cancel();
     _ctrl.onDoublesPlayersNeeded = null;
     _ctrl.onServerSelectionNeeded = null;
     super.dispose();
   }
 
+  void _startBreak() {
+    _ctrl.startBreak(); // Marks break as active
+    _breakTimer?.cancel();
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_ctrl.remainingBreakTime == null ||
+          _ctrl.remainingBreakTime!.inSeconds <= 0) {
+        timer.cancel();
+        _ctrl.endBreak();
+      } else {
+        _ctrl.remainingBreakTime =
+            _ctrl.remainingBreakTime! - const Duration(seconds: 1);
+        _ctrl.notifyListeners();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctrl = context.watch<MatchController>();
+    final bool disableButtons = ctrl.isBreakActive || !ctrl.isGameEditable;
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +97,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => ChangeNotifierProvider.value(
-                    value: Provider.of<MatchController>(context, listen: false),
+                    value: ctrl,
                     child: const ScoreboardDisplayScreen(),
                   ),
                 ),
@@ -124,9 +145,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                               ctrl.currentGame.setsWonHome,
                             ),
                           ),
-                          const SizedBox(
-                            width: 8,
-                          ), // small spacing between columns
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _scoreColumn(
                               ctrl.currentGame.awayPlayers
@@ -141,109 +160,65 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Addition Points
+                    // --- Points Buttons ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         ElevatedButton(
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(
-                              AppColors.airForceBlue,
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.secondaryBlack,
-                            ),
-                            textStyle: WidgetStateProperty.all<TextStyle?>(
-                              GoogleFonts.oswald(
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ),
-                          onPressed: ctrl.isGameEditable
-                              ? ctrl.addPointHome
-                              : null,
+                          style: _buttonStyle(AppColors.airForceBlue),
+                          onPressed: disableButtons ? null : ctrl.addPointHome,
                           child: const Text('+ Home Point'),
                         ),
                         ElevatedButton(
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(
-                              AppColors.airForceBlue,
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.secondaryBlack,
-                            ),
-                            textStyle: WidgetStateProperty.all<TextStyle?>(
-                              GoogleFonts.oswald(
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ),
-                          onPressed: ctrl.isGameEditable
-                              ? ctrl.addPointAway
-                              : null,
+                          style: _buttonStyle(AppColors.airForceBlue),
+                          onPressed: disableButtons ? null : ctrl.addPointAway,
                           child: const Text('+ Away Point'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-
-                    // Minus Points
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         ElevatedButton(
-                          onPressed: ctrl.isGameEditable
-                              ? ctrl.undoPointHome
-                              : null,
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(
-                              AppColors.turkeyRed,
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.white,
-                            ),
-                            textStyle: WidgetStateProperty.all<TextStyle?>(
-                              GoogleFonts.oswald(
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ),
+                          style: _buttonStyle(AppColors.turkeyRed),
+                          onPressed: disableButtons ? null : ctrl.undoPointHome,
                           child: const Text('- Home Point'),
                         ),
                         ElevatedButton(
-                          onPressed: ctrl.isGameEditable
-                              ? ctrl.undoPointAway
-                              : null,
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(
-                              AppColors.turkeyRed,
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.white,
-                            ),
-                            textStyle: WidgetStateProperty.all<TextStyle?>(
-                              GoogleFonts.oswald(
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ),
+                          style: _buttonStyle(AppColors.turkeyRed),
+                          onPressed: disableButtons ? null : ctrl.undoPointAway,
                           child: const Text('- Away Point'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
+
+                    // --- Break Timer & End Early Button ---
+                    if (ctrl.isBreakActive)
+                      Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Break: ${ctrl.remainingBreakTime?.inMinutes.remainder(60).toString().padLeft(2, '0')}:${ctrl.remainingBreakTime?.inSeconds.remainder(60).toString().padLeft(2, '0')}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: Colors.yellow,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: _ctrl.endBreakEarly,
+                              style: _buttonStyle(AppColors.timberWhite),
+                              child: const Text('End Break Early'),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    // Complete Match Button
                     if (ctrl.games.last.setsWonHome == 3 ||
                         ctrl.games.last.setsWonAway == 3)
                       ElevatedButton(
@@ -255,72 +230,29 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             ),
                           );
                         },
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(
-                            AppColors.timberWhite,
-                          ),
-                          foregroundColor: WidgetStateProperty.all(
-                            AppColors.secondaryBlack,
-                          ),
-                          textStyle: WidgetStateProperty.all<TextStyle?>(
-                            GoogleFonts.oswald(
-                              textStyle: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ),
+                        style: _buttonStyle(AppColors.timberWhite),
                         child: const Text('Complete Match'),
                       ),
                   ],
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                if (ctrl.currentGame.order >
-                    1) // only show if not the first game
+                if (ctrl.currentGame.order > 1)
                   ElevatedButton(
-                    onPressed: ctrl.previousGame,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(
-                        AppColors.timberWhite,
-                      ),
-                      foregroundColor: WidgetStateProperty.all(
-                        AppColors.secondaryBlack,
-                      ),
-                      textStyle: WidgetStateProperty.all<TextStyle?>(
-                        GoogleFonts.oswald(
-                          textStyle: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ),
-                    child: Text('Previous'),
+                    onPressed: disableButtons ? null : ctrl.previousGame,
+                    style: _buttonStyle(AppColors.timberWhite),
+                    child: const Text('Previous'),
                   ),
                 ElevatedButton(
-                  onPressed: ctrl.isCurrentGameCompleted ? ctrl.nextGame : null,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all(
-                      AppColors.timberWhite,
-                    ),
-                    foregroundColor: WidgetStateProperty.all(
-                      AppColors.secondaryBlack,
-                    ),
-                    textStyle: WidgetStateProperty.all<TextStyle?>(
-                      GoogleFonts.oswald(
-                        textStyle: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
+                  onPressed: disableButtons || !ctrl.isCurrentGameCompleted
+                      ? null
+                      : ctrl.nextGame,
+                  style: _buttonStyle(AppColors.timberWhite),
                   child: const Text('Next Game'),
                 ),
               ],
@@ -331,7 +263,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
       bottomNavigationBar: BottomAppBar(
         color: Colors.grey[900],
         child: SizedBox(
-          width: double.infinity, // makes it full width
+          width: double.infinity,
           child: StyledIconButton(
             onPressed: () {
               Navigator.pushAndRemoveUntil(
@@ -348,14 +280,27 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
+  // -------------------------
+  // Helper Widgets
+  // -------------------------
+  ButtonStyle _buttonStyle(Color bgColor) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: bgColor,
+      foregroundColor: AppColors.secondaryBlack,
+      textStyle: GoogleFonts.oswald(
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+      ),
+    );
+  }
+
   Widget _scoreColumn(String label, int points, int sets) {
     return Column(
       children: [
         Text(
           label,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center, // ✅ centers multiline doubles names
-          softWrap: true, // ✅ allows wrapping for long names
+          textAlign: TextAlign.center,
+          softWrap: true,
           overflow: TextOverflow.visible,
         ),
         Text('Points: $points', style: const TextStyle(fontSize: 22)),
@@ -367,13 +312,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
+  // -------------------------
+  // Dialogs
+  // -------------------------
   void _showDoublesPlayerPicker(BuildContext context, MatchController ctrl) {
     List<Player> selectedHome = [];
     List<Player> selectedAway = [];
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing
+      barrierDismissible: false,
       builder: (_) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Select Doubles Players'),
@@ -391,9 +339,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     onSelected: (selected) {
                       setState(() {
                         if (selected) {
-                          if (selectedHome.length < 2) {
-                            selectedHome.add(p);
-                          }
+                          if (selectedHome.length < 2) selectedHome.add(p);
                         } else {
                           selectedHome.remove(p);
                         }
@@ -414,9 +360,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     onSelected: (selected) {
                       setState(() {
                         if (selected) {
-                          if (selectedAway.length < 2) {
-                            selectedAway.add(p);
-                          }
+                          if (selectedAway.length < 2) selectedAway.add(p);
                         } else {
                           selectedAway.remove(p);
                         }
@@ -433,7 +377,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ? () {
                       ctrl.setDoublesPlayers(selectedHome, selectedAway);
                       Navigator.pop(context);
-                      // After setting players, immediately ask for server.
                       _showServerReceiverPicker(context, ctrl);
                     }
                   : null,
@@ -451,7 +394,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing
+      barrierDismissible: false,
       builder: (_) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Select Server and Receiver'),
@@ -474,8 +417,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 onChanged: (p) {
                   setState(() {
                     selectedServer = p;
-                    // When server changes, the receiver must be reset to avoid invalid pairings.
-                    selectedReceiver = null;
+                    selectedReceiver =
+                        null; // Reset receiver when server changes
                   });
                 },
               ),
@@ -484,8 +427,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 decoration: const InputDecoration(labelText: 'Receiver'),
                 value: selectedReceiver,
                 items: (selectedServer == null)
-                    ? [] // No receiver options until server is picked
-                    // Receiver must be from the opposing team.
+                    ? []
                     : (ctrl.currentGame.homePlayers.contains(selectedServer!)
                               ? ctrl.currentGame.awayPlayers
                               : ctrl.currentGame.homePlayers)

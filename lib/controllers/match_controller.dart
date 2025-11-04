@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/game.dart';
@@ -27,6 +29,8 @@ class MatchController extends ChangeNotifier {
   Duration breakDuration = const Duration(minutes: 2); // configurable
   Duration? remainingBreakTime;
   bool isBreakActive = false;
+  Timer? _breakTimer;
+
   VoidCallback? onBreakStarted;
   VoidCallback? onBreakEnded;
 
@@ -57,7 +61,7 @@ class MatchController extends ChangeNotifier {
       games.add(
         Game(
           order: (i ~/ 2) + 1,
-          isDoubles: i == 8, // Game 5 (index 8, 9) is doubles
+          isDoubles: i == 8, // Game 5 (index 8,9) is doubles
           homePlayers: List.from(playerCombinations[i]),
           awayPlayers: List.from(playerCombinations[i + 1]),
         ),
@@ -69,37 +73,30 @@ class MatchController extends ChangeNotifier {
     currentGame = games[index];
     currentSet = currentGame.sets.last;
 
-    // Reset common state
     serveCount = 0;
     deuce = false;
     currentServer = null;
     currentReceiver = null;
 
     if (currentGame.isDoubles) {
-      // --- DOUBLES LOGIC ---
       if (currentGame.homePlayers.isEmpty) {
-        // No doubles teams chosen yet
         onDoublesPlayersNeeded?.call();
         return;
       }
-
       if (currentGame.startingServer == null) {
-        // Teams chosen but no server yet
         onServerSelectionNeeded?.call();
         return;
       }
     } else {
-      // --- SINGLES LOGIC ---
       if (currentGame.startingServer == null) {
         onServerSelectionNeeded?.call();
         return;
       }
     }
 
-    // --- RESTORE GAME STATE ---
     _setFirstServerOfSet();
 
-    // Determine correct server rotation based on score
+    // Adjust server rotation based on existing points
     int totalPoints = currentSet.home + currentSet.away;
     int tempServeCount = 0;
 
@@ -125,23 +122,26 @@ class MatchController extends ChangeNotifier {
   // ----------------------------------------------------
   // CONTROL
   // ----------------------------------------------------
-
   void addPointHome() {
+    if (isBreakActive) return;
     currentSet.home++;
     _afterPoint();
   }
 
   void addPointAway() {
+    if (isBreakActive) return;
     currentSet.away++;
     _afterPoint();
   }
 
   void undoPointHome() {
+    if (isBreakActive) return;
     if (currentSet.home > 0) currentSet.home--;
     notifyListeners();
   }
 
   void undoPointAway() {
+    if (isBreakActive) return;
     if (currentSet.away > 0) currentSet.away--;
     notifyListeners();
   }
@@ -156,7 +156,7 @@ class MatchController extends ChangeNotifier {
   bool get isCurrentGameCompleted =>
       currentGame.setsWonHome == 3 || currentGame.setsWonAway == 3;
 
-  bool get isGameEditable => !isCurrentGameCompleted;
+  bool get isGameEditable => !isCurrentGameCompleted && !isBreakActive;
 
   void _checkSetEnd() {
     if ((currentSet.home >= 11 || currentSet.away >= 11) &&
@@ -172,11 +172,8 @@ class MatchController extends ChangeNotifier {
         return;
       }
 
-      currentGame.sets.add(SetScore());
-      currentSet = currentGame.sets.last;
-      deuce = false;
-      _setFirstServerOfSet();
-      notifyListeners();
+      // Start break before next set
+      startBreak();
     }
   }
 
@@ -187,19 +184,13 @@ class MatchController extends ChangeNotifier {
     if (gameStartingServer == null || gameStartingReceiver == null) return;
 
     if (currentGame.isDoubles) {
-      // In doubles, the player who was due to serve next will serve.
-      // This is a simplified model where the receiver of the last set serves to the partner of the server of the last set.
-      // For now, we just reset to the game's starting server which is a common house rule.
       currentServer = gameStartingServer;
       currentReceiver = gameStartingReceiver;
     } else {
-      // In singles, the server alternates each set.
       if ((currentGame.sets.length - 1) % 2 == 0) {
-        // Sets 1, 3, 5
         currentServer = gameStartingServer;
         currentReceiver = gameStartingReceiver;
       } else {
-        // Sets 2, 4
         currentServer = gameStartingReceiver;
         currentReceiver = gameStartingServer;
       }
@@ -217,15 +208,31 @@ class MatchController extends ChangeNotifier {
     setServer(server, receiver);
   }
 
+  /// Ends the break and immediately starts the next set
+  void endBreakEarly() {
+    _breakTimer?.cancel(); // stop UI timer
+    endBreak(); // mark break inactive
+
+    // Prepare next set
+    currentGame.sets.add(SetScore()); // add a new empty set
+    currentSet = currentGame.sets.last;
+
+    _setFirstServerOfSet(); // pick first server for the new set
+    serveCount = 0; // reset server rotation
+    notifyListeners();
+  }
+
   void _completeGame() {
     if (currentGame.setsWonHome > currentGame.setsWonAway) {
       matchGamesWonHome++;
     } else {
       matchGamesWonAway++;
     }
+
     if (currentGame.order < games.length) {
       _loadGame(currentGame.order);
     }
+
     notifyListeners();
   }
 
@@ -295,33 +302,36 @@ class MatchController extends ChangeNotifier {
   }
 
   // ----------------------------------------------------
-  // SET INTERVAL
+  // SET BREAK
   // ----------------------------------------------------
-  void startBreak() {
-    remainingBreakTime = breakDuration;
+  void startBreak({Duration? duration}) {
+    remainingBreakTime = duration ?? breakDuration;
     isBreakActive = true;
     notifyListeners();
-
     onBreakStarted?.call();
 
-    // countdown
-    Future.doWhile(() async {
+    _breakTimer?.cancel(); // cancel any existing timer
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (remainingBreakTime == null) return;
+
       if (remainingBreakTime!.inSeconds <= 0) {
         endBreak();
-        return false;
+        timer.cancel();
+      } else {
+        remainingBreakTime = remainingBreakTime! - const Duration(seconds: 1);
+        notifyListeners();
       }
-      await Future.delayed(const Duration(seconds: 1));
-      remainingBreakTime = remainingBreakTime! - const Duration(seconds: 1);
-      notifyListeners();
-      return true;
     });
   }
 
-  void endBreak() {
+  void endBreak({bool early = false}) {
     isBreakActive = false;
-    remainingBreakTime = null;
     notifyListeners();
-    onBreakEnded?.call();
+
+    if (early) {
+      // directly prepare the next set/game if needed
+      _setFirstServerOfSet();
+    }
   }
 
   // ----------------------------------------------------
@@ -346,5 +356,11 @@ class MatchController extends ChangeNotifier {
     _initializeGames();
     _loadGame(0);
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _breakTimer?.cancel();
+    super.dispose();
   }
 }
