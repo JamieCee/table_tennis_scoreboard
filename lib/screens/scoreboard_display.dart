@@ -15,12 +15,15 @@ class ScoreboardDisplayScreen extends StatefulWidget {
 }
 
 class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
+  late final MatchController _ctrl;
+
   @override
   void initState() {
     super.initState();
     // We need to wait for the first frame to be built before showing a dialog
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl = context.read<MatchController>();
+
       ctrl.onDoublesPlayersNeeded = _showPicker;
       ctrl.onServerSelectionNeeded = _showPicker;
 
@@ -33,11 +36,17 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only assign once
+    _ctrl = Provider.of<MatchController>(context, listen: false);
+  }
+
+  @override
   void dispose() {
-    // Avoid trying to access context in dispose by using listen: false
-    final ctrl = Provider.of<MatchController>(context, listen: false);
-    ctrl.onDoublesPlayersNeeded = null;
-    ctrl.onServerSelectionNeeded = null;
+    // Use the stored reference instead of Provider.of()
+    _ctrl.onDoublesPlayersNeeded = null;
+    _ctrl.onServerSelectionNeeded = null;
     super.dispose();
   }
 

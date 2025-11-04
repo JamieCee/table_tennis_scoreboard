@@ -24,6 +24,12 @@ class MatchController extends ChangeNotifier {
   int serveCount = 0;
   bool deuce = false;
 
+  Duration breakDuration = const Duration(minutes: 2); // configurable
+  Duration? remainingBreakTime;
+  bool isBreakActive = false;
+  VoidCallback? onBreakStarted;
+  VoidCallback? onBreakEnded;
+
   MatchController({required this.home, required this.away}) {
     _initializeGames();
     _loadGame(0);
@@ -286,6 +292,36 @@ class MatchController extends ChangeNotifier {
     currentServer = currentReceiver;
     currentReceiver = temp;
     notifyListeners();
+  }
+
+  // ----------------------------------------------------
+  // SET INTERVAL
+  // ----------------------------------------------------
+  void startBreak() {
+    remainingBreakTime = breakDuration;
+    isBreakActive = true;
+    notifyListeners();
+
+    onBreakStarted?.call();
+
+    // countdown
+    Future.doWhile(() async {
+      if (remainingBreakTime!.inSeconds <= 0) {
+        endBreak();
+        return false;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+      remainingBreakTime = remainingBreakTime! - const Duration(seconds: 1);
+      notifyListeners();
+      return true;
+    });
+  }
+
+  void endBreak() {
+    isBreakActive = false;
+    remainingBreakTime = null;
+    notifyListeners();
+    onBreakEnded?.call();
   }
 
   // ----------------------------------------------------
