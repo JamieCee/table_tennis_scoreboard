@@ -33,30 +33,52 @@ class StyledIconButton extends StatelessWidget {
     required this.onPressed,
     required this.icon,
     required this.child,
+    this.color,
+    this.gradient,
+    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+    this.borderRadius = 12,
   });
 
-  final Function() onPressed;
+  final VoidCallback onPressed;
   final Widget icon;
   final Widget child;
+  final Color? color;
+  final Gradient? gradient;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
+    final decoration = BoxDecoration(
+      gradient:
+          gradient ??
+          (color == null
+              ? LinearGradient(
+                  colors: [AppColors.primaryColor, AppColors.primaryAccent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
+              : null),
+      color: color,
+      borderRadius: BorderRadius.circular(borderRadius),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black26,
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        padding: EdgeInsets
-            .zero, // remove default padding so our container controls it
+        padding: EdgeInsets.zero,
+        foregroundColor: Colors.white, // ensures default text/icon color
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primaryColor, AppColors.primaryAccent],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: const BorderRadius.all(Radius.circular(6)),
-        ),
+        padding: padding,
+        decoration: decoration,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,

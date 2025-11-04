@@ -151,8 +151,8 @@ class MatchController extends ChangeNotifier {
 
   void _afterPoint() {
     serveCount++;
-    _maybeRotateServer();
-    _checkSetEnd();
+    _maybeRotateServer(); // do we swap the server?
+    _checkSetEnd(); // Is it the end of the set?
     notifyListeners();
   }
 

@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:table_tennis_scoreboard/screens/controller/game_score.dart';
+import 'package:table_tennis_scoreboard/screens/controller/points_counter.dart';
 import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
-import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 import 'package:table_tennis_scoreboard/shared/styled_button.dart';
-import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
+import '../widgets/themed_dialog.dart';
+import 'controller/points_buttons.dart';
 import 'match_scorecard_screen.dart';
 
 class ControllerScreen extends StatefulWidget {
@@ -82,16 +84,25 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   Widget build(BuildContext context) {
     final ctrl = context.watch<MatchController>();
-    final bool disableButtons = ctrl.isBreakActive || !ctrl.isGameEditable;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: AppColors.charcoal, // dark slate base
       appBar: AppBar(
         title: const Text('Match Controller'),
-        backgroundColor: Colors.grey[900],
-        elevation: 4,
+        backgroundColor: AppColors.midnightBlue,
+        elevation: 6,
+        shadowColor: Colors.black54,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.oswald(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.timberWhite,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.tv),
+            tooltip: "Open Display View",
+            icon: const Icon(Icons.tv, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -107,173 +118,148 @@ class _ControllerScreenState extends State<ControllerScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: StyledHeading(
-                        'Game ${ctrl.currentGame.order} of ${ctrl.games.length}',
-                      ),
-                    ),
-                    Center(
-                      child: StyledSubHeading(
-                        'Match Score: ${ctrl.matchGamesWonHome} - ${ctrl.matchGamesWonAway}',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: _scoreColumn(
-                              ctrl.currentGame.homePlayers
-                                  .map((p) => p.name)
-                                  .join(" & "),
-                              ctrl.currentSet.home,
-                              ctrl.currentGame.setsWonHome,
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.steelGray,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GameAndScoreWidget(ctrl: ctrl),
+                      const SizedBox(height: 16),
+                      PointsCounter(ctrl: ctrl),
+                      const SizedBox(height: 30),
+
+                      // --- Buttons Section ---
+                      PointsButtons(ctrl: ctrl),
+                      const SizedBox(height: 24),
+
+                      // --- Break Timer ---
+                      if (ctrl.isBreakActive)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.midnightBlue.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.yellowAccent.withOpacity(0.5),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _scoreColumn(
-                              ctrl.currentGame.awayPlayers
-                                  .map((p) => p.name)
-                                  .join(" & "),
-                              ctrl.currentSet.away,
-                              ctrl.currentGame.setsWonAway,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- Points Buttons ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        ElevatedButton(
-                          style: _buttonStyle(AppColors.airForceBlue),
-                          onPressed: disableButtons ? null : ctrl.addPointHome,
-                          child: const Text('+ Home Point'),
-                        ),
-                        ElevatedButton(
-                          style: _buttonStyle(AppColors.airForceBlue),
-                          onPressed: disableButtons ? null : ctrl.addPointAway,
-                          child: const Text('+ Away Point'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        ElevatedButton(
-                          style: _buttonStyle(AppColors.turkeyRed),
-                          onPressed: disableButtons ? null : ctrl.undoPointHome,
-                          child: const Text('- Home Point'),
-                        ),
-                        ElevatedButton(
-                          style: _buttonStyle(AppColors.turkeyRed),
-                          onPressed: disableButtons ? null : ctrl.undoPointAway,
-                          child: const Text('- Away Point'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- Break Timer & End Early Button ---
-                    if (ctrl.isBreakActive)
-                      Center(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Break: ${ctrl.remainingBreakTime?.inMinutes.remainder(60).toString().padLeft(2, '0')}:${ctrl.remainingBreakTime?.inSeconds.remainder(60).toString().padLeft(2, '0')}',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.yellow,
+                          child: Column(
+                            children: [
+                              Text(
+                                'Break: ${ctrl.remainingBreakTime?.inMinutes.remainder(60).toString().padLeft(2, '0')}:${ctrl.remainingBreakTime?.inSeconds.remainder(60).toString().padLeft(2, '0')}',
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 24,
+                                  color: Colors.yellowAccent,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: _ctrl.endBreakEarly,
-                              style: _buttonStyle(AppColors.timberWhite),
-                              child: const Text('End Break Early'),
-                            ),
-                          ],
+                              const SizedBox(height: 10),
+                              StyledIconButton(
+                                onPressed: _ctrl.endBreakEarly,
+                                icon: const Icon(
+                                  Icons.timer_off_outlined,
+                                  color: Colors.black,
+                                ),
+                                color: Colors.yellowAccent,
+                                child: const Text(
+                                  'End Break Early',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    // Complete Match Button
-                    if (ctrl.games.last.setsWonHome == 3 ||
-                        ctrl.games.last.setsWonAway == 3)
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MatchScorecardScreen(ctrl: ctrl),
+                      // --- Complete Match Button ---
+                      if (ctrl.games.last.setsWonHome == 3 ||
+                          ctrl.games.last.setsWonAway == 3)
+                        StyledIconButton(
+                          color: AppColors.emeraldGreen,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MatchScorecardScreen(ctrl: ctrl),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.emoji_events_outlined,
+                            color: Colors.black,
+                          ),
+                          child: const Text(
+                            'Complete Match',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
-                          );
-                        },
-                        style: _buttonStyle(AppColors.timberWhite),
-                        child: const Text('Complete Match'),
-                      ),
-                  ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                if (ctrl.currentGame.order > 1)
-                  ElevatedButton(
-                    onPressed: disableButtons ? null : ctrl.previousGame,
-                    style: _buttonStyle(AppColors.timberWhite),
-                    child: const Text('Previous'),
-                  ),
-                ElevatedButton(
-                  onPressed: disableButtons || !ctrl.isCurrentGameCompleted
-                      ? null
-                      : ctrl.nextGame,
-                  style: _buttonStyle(AppColors.timberWhite),
-                  child: const Text('Next Game'),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomAppBar(
-        color: Colors.grey[900],
-        child: SizedBox(
-          width: double.infinity,
-          child: StyledIconButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
-            child: StyledButtonText("Reset App"),
+        color: AppColors.midnightBlue,
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: SizedBox(
+            width: double.infinity, // full width
+            height: 56, // taller so text is comfortably visible
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // reset app logic
+              },
+              icon: const Icon(Icons.refresh, color: Colors.white, size: 24),
+              label: const Text(
+                "Reset App",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.turkeyRed,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -293,25 +279,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
-  Widget _scoreColumn(String label, int points, int sets) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-          softWrap: true,
-          overflow: TextOverflow.visible,
-        ),
-        Text('Points: $points', style: const TextStyle(fontSize: 22)),
-        Text(
-          'Sets: $sets',
-          style: const TextStyle(fontSize: 18, color: Colors.grey),
-        ),
-      ],
-    );
-  }
-
   // -------------------------
   // Dialogs
   // -------------------------
@@ -323,56 +290,35 @@ class _ControllerScreenState extends State<ControllerScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Select Doubles Players'),
+        builder: (context, setState) => ThemedDialog(
+          title: 'Select Doubles Players',
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Home Team (Select 2)'),
-              Wrap(
-                spacing: 8.0,
-                children: ctrl.home.players.map((p) {
-                  final isSelected = selectedHome.contains(p);
-                  return ChoiceChip(
-                    label: Text(p.name),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          if (selectedHome.length < 2) selectedHome.add(p);
-                        } else {
-                          selectedHome.remove(p);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+              _teamChipSection(
+                context,
+                'Home Team (Select 2)',
+                ctrl.home.players,
+                selectedHome,
+                setState,
+                Colors.blueAccent,
               ),
-              const SizedBox(height: 12),
-              const Text('Away Team (Select 2)'),
-              Wrap(
-                spacing: 8.0,
-                children: ctrl.away.players.map((p) {
-                  final isSelected = selectedAway.contains(p);
-                  return ChoiceChip(
-                    label: Text(p.name),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          if (selectedAway.length < 2) selectedAway.add(p);
-                        } else {
-                          selectedAway.remove(p);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+              const SizedBox(height: 16),
+              _teamChipSection(
+                context,
+                'Away Team (Select 2)',
+                ctrl.away.players,
+                selectedAway,
+                setState,
+                Colors.redAccent,
               ),
             ],
           ),
           actions: [
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Confirm'),
               onPressed: (selectedHome.length == 2 && selectedAway.length == 2)
                   ? () {
                       ctrl.setDoublesPlayers(selectedHome, selectedAway);
@@ -380,7 +326,17 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       _showServerReceiverPicker(context, ctrl);
                     }
                   : null,
-              child: const Text('Set Players'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.greenAccent.shade400,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ],
         ),
@@ -388,71 +344,168 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
+  Widget _teamChipSection(
+    BuildContext context,
+    String title,
+    List<Player> players,
+    List<Player> selectedPlayers,
+    void Function(void Function()) setState,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.robotoCondensed(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 6.0,
+          children: players.map((p) {
+            final isSelected = selectedPlayers.contains(p);
+            return ChoiceChip(
+              label: Text(p.name),
+              selected: isSelected,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              selectedColor: color,
+              backgroundColor: Colors.white10,
+              side: BorderSide(color: color.withOpacity(0.4)),
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    if (selectedPlayers.length < 2) selectedPlayers.add(p);
+                  } else {
+                    selectedPlayers.remove(p);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   void _showServerReceiverPicker(BuildContext context, MatchController ctrl) {
     Player? selectedServer;
-    Player? selectedReceiver;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Select Server and Receiver'),
+        builder: (context, setDialogState) => ThemedDialog(
+          title: 'Select Server',
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DropdownButtonFormField<Player>(
-                decoration: const InputDecoration(labelText: 'Server'),
-                value: selectedServer,
-                items:
-                    [
-                          ...ctrl.currentGame.homePlayers,
-                          ...ctrl.currentGame.awayPlayers,
-                        ]
-                        .map(
-                          (p) =>
-                              DropdownMenuItem(value: p, child: Text(p.name)),
-                        )
-                        .toList(),
-                onChanged: (p) {
-                  setState(() {
-                    selectedServer = p;
-                    selectedReceiver =
-                        null; // Reset receiver when server changes
-                  });
-                },
+              const Text(
+                'Choose the player who will serve first:',
+                style: TextStyle(color: Colors.white70),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<Player>(
-                decoration: const InputDecoration(labelText: 'Receiver'),
-                value: selectedReceiver,
-                items: (selectedServer == null)
-                    ? []
-                    : (ctrl.currentGame.homePlayers.contains(selectedServer!)
-                              ? ctrl.currentGame.awayPlayers
-                              : ctrl.currentGame.homePlayers)
-                          .map(
-                            (p) =>
-                                DropdownMenuItem(value: p, child: Text(p.name)),
-                          )
-                          .toList(),
-                onChanged: (p) => setState(() => selectedReceiver = p),
+              const SizedBox(height: 16),
+              _serverSelectSection(
+                'Home Team',
+                ctrl.currentGame.homePlayers,
+                selectedServer,
+                (p) => setDialogState(() => selectedServer = p),
+                Colors.blueAccent,
+              ),
+              const SizedBox(height: 16),
+              _serverSelectSection(
+                'Away Team',
+                ctrl.currentGame.awayPlayers,
+                selectedServer,
+                (p) => setDialogState(() => selectedServer = p),
+                Colors.redAccent,
               ),
             ],
           ),
           actions: [
-            ElevatedButton(
-              onPressed: (selectedServer != null && selectedReceiver != null)
-                  ? () {
-                      ctrl.setServer(selectedServer, selectedReceiver);
+            ElevatedButton.icon(
+              icon: const Icon(Icons.check),
+              label: Text(
+                selectedServer == null
+                    ? 'Confirm'
+                    : 'Start: ${selectedServer!.name} serves',
+              ),
+              onPressed: selectedServer == null
+                  ? null
+                  : () {
+                      final receiver =
+                          ctrl.currentGame.homePlayers.contains(selectedServer)
+                          ? ctrl.currentGame.awayPlayers.first
+                          : ctrl.currentGame.homePlayers.first;
+
+                      ctrl.setServer(selectedServer, receiver);
                       Navigator.pop(context);
-                    }
-                  : null,
-              child: const Text('Set'),
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.greenAccent.shade400,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _serverSelectSection(
+    String label,
+    List<Player> players,
+    Player? selectedServer,
+    void Function(Player) onSelected,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 6.0,
+          children: players.map((p) {
+            final isSelected = selectedServer == p;
+            return ChoiceChip(
+              label: Text(p.name),
+              selected: isSelected,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              selectedColor: color,
+              backgroundColor: Colors.white10,
+              side: BorderSide(color: color.withOpacity(0.4)),
+              onSelected: (_) => onSelected(p),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

@@ -12,4 +12,9 @@ class AppColors {
   static Color timberWhite = const Color.fromRGBO(206, 208, 206, 1);
 
   static Color yellow = const Color.fromRGBO(237, 174, 73, 1);
+
+  static const charcoal = Color(0xFF1C1F26);
+  static const steelGray = Color(0xFF2A2F38);
+  static const midnightBlue = Color(0xFF202A44);
+  static const emeraldGreen = Color(0xFF3FFFA2);
 }
