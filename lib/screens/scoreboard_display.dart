@@ -25,15 +25,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     _ctrl = context.read<MatchController>();
 
     // Set picker callbacks after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _ctrl.onDoublesPlayersNeeded = _showPicker;
-      _ctrl.onServerSelectionNeeded = _showPicker;
-
-      // Show picker if needed for the first game
-      if (_ctrl.currentServer == null) {
-        _showPicker();
-      }
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _ctrl.onDoublesPlayersNeeded = _showPicker;
+    //   _ctrl.onServerSelectionNeeded = _showPicker;
+    //
+    //   // Show picker if needed for the first game
+    //   if (_ctrl.currentServer == null) {
+    //     _showPicker();
+    //   }
+    // });
   }
 
   @override

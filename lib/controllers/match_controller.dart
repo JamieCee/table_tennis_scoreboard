@@ -208,19 +208,19 @@ class MatchController extends ChangeNotifier {
     setServer(server, receiver);
   }
 
-  /// Ends the break and immediately starts the next set
-  void endBreakEarly() {
-    _breakTimer?.cancel(); // stop UI timer
-    endBreak(); // mark break inactive
-
-    // Prepare next set
-    currentGame.sets.add(SetScore()); // add a new empty set
-    currentSet = currentGame.sets.last;
-
-    _setFirstServerOfSet(); // pick first server for the new set
-    serveCount = 0; // reset server rotation
-    notifyListeners();
-  }
+  // /// Ends the break and immediately starts the next set
+  // void endBreakEarly() {
+  //   _breakTimer?.cancel(); // stop UI timer
+  //   endBreak(); // mark break inactive
+  //
+  //   // Prepare next set
+  //   currentGame.sets.add(SetScore()); // add a new empty set
+  //   currentSet = currentGame.sets.last;
+  //
+  //   _setFirstServerOfSet(); // pick first server for the new set
+  //   serveCount = 0; // reset server rotation
+  //   notifyListeners();
+  // }
 
   void _completeGame() {
     if (currentGame.setsWonHome > currentGame.setsWonAway) {
@@ -301,6 +301,23 @@ class MatchController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void endBreak({bool early = false}) {
+    isBreakActive = false;
+    _breakTimer?.cancel();
+    _breakTimer = null;
+
+    // Add a new set (only if the game isn't finished)
+    if (!isCurrentGameCompleted) {
+      currentGame.sets.add(SetScore());
+      currentSet = currentGame.sets.last;
+
+      _setFirstServerOfSet();
+      serveCount = 0;
+    }
+
+    notifyListeners();
+  }
+
   // ----------------------------------------------------
   // SET BREAK
   // ----------------------------------------------------
@@ -324,14 +341,8 @@ class MatchController extends ChangeNotifier {
     });
   }
 
-  void endBreak({bool early = false}) {
-    isBreakActive = false;
-    notifyListeners();
-
-    if (early) {
-      // directly prepare the next set/game if needed
-      _setFirstServerOfSet();
-    }
+  void endBreakEarly() {
+    endBreak(early: true);
   }
 
   // ----------------------------------------------------

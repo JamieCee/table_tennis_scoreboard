@@ -10,4 +10,6 @@ class AppColors {
   static Color turkeyRed = const Color.fromRGBO(174, 15, 9, 1);
   static Color white = const Color.fromRGBO(235, 235, 235, 1);
   static Color timberWhite = const Color.fromRGBO(206, 208, 206, 1);
+
+  static Color yellow = const Color.fromRGBO(237, 174, 73, 1);
 }

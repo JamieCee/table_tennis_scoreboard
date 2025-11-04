@@ -286,7 +286,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
   ButtonStyle _buttonStyle(Color bgColor) {
     return ElevatedButton.styleFrom(
       backgroundColor: bgColor,
-      foregroundColor: AppColors.secondaryBlack,
+      foregroundColor: AppColors.white,
       textStyle: GoogleFonts.oswald(
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
       ),
