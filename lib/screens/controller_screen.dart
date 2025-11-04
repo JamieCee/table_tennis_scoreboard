@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/screens/controller/game_score.dart';
 import 'package:table_tennis_scoreboard/screens/controller/points_counter.dart';
 import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
+import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 import 'package:table_tennis_scoreboard/shared/styled_button.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
 
@@ -231,13 +232,18 @@ class _ControllerScreenState extends State<ControllerScreen> {
         color: AppColors.midnightBlue,
         elevation: 8,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
           child: SizedBox(
             width: double.infinity, // full width
             height: 56, // taller so text is comfortably visible
             child: ElevatedButton.icon(
               onPressed: () {
                 // reset app logic
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
+                  (route) => false,
+                );
               },
               icon: const Icon(Icons.refresh, color: Colors.white, size: 24),
               label: const Text(
