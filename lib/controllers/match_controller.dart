@@ -28,7 +28,7 @@ class MatchController extends ChangeNotifier {
   bool deuce = false;
 
   Duration breakDuration = Duration(
-    minutes: TableTennisConfig.setBreak,
+    seconds: TableTennisConfig.setBreak,
   ); // configurable
   Duration? remainingBreakTime;
   bool isBreakActive = false;
@@ -74,53 +74,118 @@ class MatchController extends ChangeNotifier {
 
   void _loadGame(int index) {
     currentGame = games[index];
-    currentSet = currentGame.sets.last;
 
+    // Reset serving info
+    currentGame.startingServer = null;
+    currentGame.startingReceiver = null;
+
+    currentSet = currentGame.sets.last;
     serveCount = 0;
     deuce = false;
     currentServer = null;
     currentReceiver = null;
 
-    if (currentGame.isDoubles) {
-      if (currentGame.homePlayers.isEmpty) {
-        onDoublesPlayersNeeded?.call();
-        return;
-      }
-      if (currentGame.startingServer == null) {
-        onServerSelectionNeeded?.call();
-        return;
-      }
-    } else {
-      if (currentGame.startingServer == null) {
-        onServerSelectionNeeded?.call();
-        return;
-      }
-    }
+    print("Current Game ${currentGame}");
+    print("is doubles ${currentGame.isDoubles}");
 
-    _setFirstServerOfSet();
+    // Notify UI that we’ve switched to a new game immediately
+    notifyListeners();
 
-    // Adjust server rotation based on existing points
-    int totalPoints = currentSet.home + currentSet.away;
-    int tempServeCount = 0;
-
-    for (var i = 0; i < totalPoints; i++) {
-      tempServeCount++;
-      final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
-      final interval = isDeuce ? 1 : 2;
-
-      if (tempServeCount >= interval) {
-        tempServeCount = 0;
-        if (currentGame.isDoubles) {
-          _rotateDoublesServer();
-        } else {
-          _swapServerSingles();
+    // Defer player/server setup logic slightly so the UI is ready
+    Future.microtask(() {
+      if (currentGame.isDoubles) {
+        if (currentGame.homePlayers.isEmpty) {
+          onDoublesPlayersNeeded?.call();
+          return;
+        }
+        if (currentGame.startingServer == null) {
+          onServerSelectionNeeded?.call();
+          return;
+        }
+      } else {
+        if (currentGame.startingServer == null) {
+          onServerSelectionNeeded?.call();
+          print("onServerSelectionNeeded (singles)");
+          return;
         }
       }
-    }
 
-    serveCount = tempServeCount;
-    notifyListeners();
+      // Once all setup data exists, initialize serve logic
+      _setFirstServerOfSet();
+
+      // Adjust server rotation based on points so far
+      int totalPoints = currentSet.home + currentSet.away;
+      int tempServeCount = 0;
+
+      for (var i = 0; i < totalPoints; i++) {
+        tempServeCount++;
+        final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
+        final interval = isDeuce ? 1 : 2;
+
+        if (tempServeCount >= interval) {
+          tempServeCount = 0;
+          if (currentGame.isDoubles) {
+            _rotateDoublesServer();
+          } else {
+            _swapServerSingles();
+          }
+        }
+      }
+
+      serveCount = tempServeCount;
+      notifyListeners();
+    });
   }
+
+  // void _loadGame(int index) {
+  //   currentGame = games[index];
+  //   currentSet = currentGame.sets.last;
+  //
+  //   serveCount = 0;
+  //   deuce = false;
+  //   currentServer = null;
+  //   currentReceiver = null;
+  //
+  //   if (currentGame.isDoubles) {
+  //     if (currentGame.homePlayers.isEmpty) {
+  //       onDoublesPlayersNeeded?.call();
+  //       return;
+  //     }
+  //     if (currentGame.startingServer == null) {
+  //       onServerSelectionNeeded?.call();
+  //       return;
+  //     }
+  //   } else {
+  //     if (currentGame.startingServer == null) {
+  //       onServerSelectionNeeded?.call();
+  //       return;
+  //     }
+  //   }
+  //
+  //   _setFirstServerOfSet();
+  //
+  //   // Adjust server rotation based on existing points
+  //   int totalPoints = currentSet.home + currentSet.away;
+  //   int tempServeCount = 0;
+  //
+  //   for (var i = 0; i < totalPoints; i++) {
+  //     tempServeCount++;
+  //     final isDeuce = currentSet.home >= 10 && currentSet.away >= 10;
+  //     final interval = isDeuce ? 1 : 2;
+  //
+  //     if (tempServeCount >= interval) {
+  //       tempServeCount = 0;
+  //       if (currentGame.isDoubles) {
+  //         _rotateDoublesServer();
+  //       } else {
+  //         _swapServerSingles();
+  //       }
+  //     }
+  //   }
+  //
+  //   serveCount = tempServeCount;
+  //   notifyListeners();
+  // }
 
   // ----------------------------------------------------
   // CONTROL
