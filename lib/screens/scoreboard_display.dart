@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 import 'package:table_tennis_scoreboard/widgets/doubles_server_picker.dart';
 
 import '../controllers/match_controller.dart';
+import '../theme.dart';
 
 class ScoreboardDisplayScreen extends StatefulWidget {
   const ScoreboardDisplayScreen({super.key});
@@ -20,20 +22,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Assign controller once
     _ctrl = context.read<MatchController>();
-
-    // Set picker callbacks after the first frame
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   _ctrl.onDoublesPlayersNeeded = _showPicker;
-    //   _ctrl.onServerSelectionNeeded = _showPicker;
-    //
-    //   // Show picker if needed for the first game
-    //   if (_ctrl.currentServer == null) {
-    //     _showPicker();
-    //   }
-    // });
   }
 
   @override
@@ -58,16 +47,23 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = context
-        .watch<MatchController>(); // rebuilds on notifyListeners()
+    final ctrl = context.watch<MatchController>();
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.midnightBlue,
       appBar: AppBar(
-        title: const Text('Scoreboard Display'),
+        backgroundColor: Colors.black87,
+        elevation: 4,
+        title: Text(
+          'Match Scoreboard',
+          style: GoogleFonts.oswald(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_remote),
+            icon: const Icon(Icons.settings_remote, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -84,11 +80,11 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Team Names + Match Score
+              // Team names + match games
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -105,153 +101,114 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 ],
               ),
 
-              // Break timer
-              if (ctrl.isBreakActive)
-                Column(
+              const SizedBox(height: 8),
+
+              // Game Info or Break Timer
+              ctrl.isBreakActive
+                  ? Column(
+                      children: [
+                        Text(
+                          "SET BREAK",
+                          style: GoogleFonts.oswald(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white70,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Text(
+                          "${ctrl.remainingBreakTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+                          "${ctrl.remainingBreakTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
+                          style: GoogleFonts.oswald(
+                            fontSize: 72,
+                            color: Colors.greenAccent,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Text(
+                          "Game ${ctrl.currentGame.order} of ${ctrl.games.length} | Set ${ctrl.currentGame.sets.length}",
+                          style: GoogleFonts.oswald(
+                            fontSize: 18,
+                            color: Colors.white70,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        if (ctrl.currentGame.homePlayers.isNotEmpty ||
+                            ctrl.currentGame.awayPlayers.isNotEmpty)
+                          Text(
+                            "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
+                            "vs "
+                            "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
+                            style: GoogleFonts.oswald(
+                              fontSize: 22,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                      ],
+                    ),
+
+              const SizedBox(height: 16),
+
+              // Main Scoreboard
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white10.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 32,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    const Text(
-                      "Set Break",
-                      style: TextStyle(fontSize: 36, color: Colors.white70),
+                    _scoreColumn(
+                      score: ctrl.currentSet.home,
+                      color: Colors.blueAccent,
+                      isServing:
+                          ctrl.currentServer?.name ==
+                          ctrl.currentGame.homePlayers.first.name,
                     ),
                     Text(
-                      "${ctrl.remainingBreakTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
-                      "${ctrl.remainingBreakTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
-                      style: const TextStyle(fontSize: 72, color: Colors.white),
-                    ),
-                  ],
-                )
-              else
-                // Game info
-                Column(
-                  children: [
-                    Text(
-                      "Game ${ctrl.currentGame.order} of ${ctrl.games.length} | "
-                      "Set ${ctrl.currentGame.sets.length}",
-                      style: const TextStyle(
-                        fontSize: 18,
+                      "—",
+                      style: GoogleFonts.oswald(
+                        fontSize: 100,
                         color: Colors.white54,
                       ),
                     ),
-                    if (ctrl.currentGame.homePlayers.isNotEmpty ||
-                        ctrl.currentGame.awayPlayers.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(
-                          "${ctrl.currentGame.homePlayers.map((p) => p.name).join(' & ')} "
-                          "vs "
-                          "${ctrl.currentGame.awayPlayers.map((p) => p.name).join(' & ')}",
-                          style: const TextStyle(
-                            fontSize: 22,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                    _scoreColumn(
+                      score: ctrl.currentSet.away,
+                      color: Colors.redAccent,
+                      isServing:
+                          ctrl.currentServer?.name ==
+                          ctrl.currentGame.awayPlayers.first.name,
+                    ),
                   ],
                 ),
-
-              // Big Score
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Home Column
-                  Column(
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        transitionBuilder: (child, animation) =>
-                            ScaleTransition(scale: animation, child: child),
-                        child:
-                            (ctrl.currentServer != null &&
-                                ctrl.currentServer!.name ==
-                                    ctrl.currentGame.homePlayers.first.name)
-                            ? const Icon(
-                                Icons.sports_tennis,
-                                key: ValueKey('homeBall'),
-                                size: 32,
-                                color: Colors.white,
-                              )
-                            : const SizedBox(
-                                key: ValueKey('homeEmpty'),
-                                height: 32,
-                              ),
-                      ),
-                      Text(
-                        "${ctrl.currentSet.home}",
-                        style: const TextStyle(
-                          fontSize: 120,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blueAccent,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const Text(
-                    "—",
-                    style: TextStyle(fontSize: 100, color: Colors.white54),
-                  ),
-
-                  // Away Column
-                  Column(
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        transitionBuilder: (child, animation) =>
-                            ScaleTransition(scale: animation, child: child),
-                        child:
-                            (ctrl.currentServer != null &&
-                                ctrl.currentServer!.name ==
-                                    ctrl.currentGame.awayPlayers.first.name)
-                            ? const Icon(
-                                Icons.sports_tennis,
-                                key: ValueKey('awayBall'),
-                                size: 32,
-                                color: Colors.white,
-                              )
-                            : const SizedBox(
-                                key: ValueKey('awayEmpty'),
-                                height: 32,
-                              ),
-                      ),
-                      Text(
-                        "${ctrl.currentSet.away}",
-                        style: const TextStyle(
-                          fontSize: 120,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
+
+              const SizedBox(height: 16),
 
               // Sets summary
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text(
-                    "${ctrl.currentGame.setsWonHome} Sets",
-                    style: const TextStyle(
-                      fontSize: 36,
-                      color: Colors.blueAccent,
-                    ),
-                  ),
-                  Text(
-                    "${ctrl.currentGame.setsWonAway} Sets",
-                    style: const TextStyle(
-                      fontSize: 36,
-                      color: Colors.redAccent,
-                    ),
-                  ),
+                  _setSummary(ctrl.currentGame.setsWonHome, Colors.blueAccent),
+                  _setSummary(ctrl.currentGame.setsWonAway, Colors.redAccent),
                 ],
               ),
 
-              // Server indicator
               if (ctrl.currentServer != null && ctrl.currentReceiver != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.only(top: 12),
                   child: StyledSubHeading(
                     '${ctrl.currentServer!.name} is serving',
                   ),
@@ -268,17 +225,75 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       children: [
         Text(
           name,
-          style: TextStyle(
-            fontSize: 24,
+          style: GoogleFonts.oswald(
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: color,
+            letterSpacing: 1.1,
           ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "$score",
+          style: GoogleFonts.oswald(
+            fontSize: 34,
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _scoreColumn({
+    required int score,
+    required Color color,
+    required bool isServing,
+  }) {
+    return Column(
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (child, anim) =>
+              ScaleTransition(scale: anim, child: child),
+          child: isServing
+              ? const Icon(
+                  Icons.sports_tennis,
+                  color: Colors.white,
+                  size: 30,
+                  key: ValueKey('serve'),
+                )
+              : const SizedBox(height: 30, key: ValueKey('empty')),
         ),
         Text(
           "$score",
-          style: const TextStyle(fontSize: 32, color: Colors.white),
+          style: GoogleFonts.oswald(
+            fontSize: 120,
+            fontWeight: FontWeight.bold,
+            color: color,
+            height: 1,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _setSummary(int setsWon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.withOpacity(0.15),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        "$setsWon Sets",
+        style: GoogleFonts.oswald(
+          fontSize: 28,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

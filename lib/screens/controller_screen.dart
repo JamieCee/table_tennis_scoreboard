@@ -412,27 +412,35 @@ class _ControllerScreenState extends State<ControllerScreen> {
           title: 'Select Server',
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Text(
                 'Choose the player who will serve first:',
                 style: TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 16),
-              _serverSelectSection(
-                'Home Team',
-                ctrl.currentGame.homePlayers,
-                selectedServer,
-                (p) => setDialogState(() => selectedServer = p),
-                Colors.blueAccent,
-              ),
-              const SizedBox(height: 16),
-              _serverSelectSection(
-                'Away Team',
-                ctrl.currentGame.awayPlayers,
-                selectedServer,
-                (p) => setDialogState(() => selectedServer = p),
-                Colors.redAccent,
+              Row(
+                children: [
+                  Expanded(
+                    child: _serverSelectSection(
+                      'Home Team',
+                      ctrl.currentGame.homePlayers,
+                      selectedServer,
+                      (p) => setDialogState(() => selectedServer = p),
+                      Colors.blueAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _serverSelectSection(
+                      'Away Team',
+                      ctrl.currentGame.awayPlayers,
+                      selectedServer,
+                      (p) => setDialogState(() => selectedServer = p),
+                      Colors.redAccent,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -481,7 +489,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
     Color color,
   ) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
@@ -495,6 +503,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
         Wrap(
           spacing: 8.0,
           runSpacing: 6.0,
+          alignment: WrapAlignment.center,
           children: players.map((p) {
             final isSelected = selectedServer == p;
             return ChoiceChip(

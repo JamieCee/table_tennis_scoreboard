@@ -28,7 +28,14 @@ class _PointsButtonsState extends State<PointsButtons> {
               child: ElevatedButton(
                 style: _scoreButtonStyle(AppColors.airForceBlue),
                 onPressed: disableButtons ? null : widget.ctrl.addPointHome,
-                child: const Text('+ Home Point'),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Add +'),
+                    SizedBox(height: 2),
+                    Text('Home Point', style: TextStyle(fontSize: 15)),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -36,7 +43,15 @@ class _PointsButtonsState extends State<PointsButtons> {
               child: ElevatedButton(
                 style: _scoreButtonStyle(Colors.redAccent),
                 onPressed: disableButtons ? null : widget.ctrl.addPointAway,
-                child: const Text('+ Away Point'),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+
+                  children: [
+                    Text('Add +'),
+                    SizedBox(height: 2),
+                    Text('Away Point', style: TextStyle(fontSize: 15)),
+                  ],
+                ),
               ),
             ),
           ],
@@ -53,7 +68,14 @@ class _PointsButtonsState extends State<PointsButtons> {
                   isRemove: true,
                 ),
                 onPressed: disableButtons ? null : widget.ctrl.undoPointHome,
-                child: const Text('- Home Point'),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Subtract -'),
+                    SizedBox(height: 2),
+                    Text('Home Point', style: TextStyle(fontSize: 15)),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -64,7 +86,14 @@ class _PointsButtonsState extends State<PointsButtons> {
                   isRemove: true,
                 ),
                 onPressed: disableButtons ? null : widget.ctrl.undoPointAway,
-                child: const Text('- Away Point'),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Subtract -'),
+                    SizedBox(height: 2),
+                    Text('Away Point', style: TextStyle(fontSize: 15)),
+                  ],
+                ),
               ),
             ),
           ],
