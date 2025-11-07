@@ -34,6 +34,11 @@ class MatchController extends ChangeNotifier {
   bool isBreakActive = false;
   Timer? _breakTimer;
 
+  bool isTimeoutActive = false;
+  int timeoutSecondsRemaining = 0;
+  Timer? _timeoutTimer;
+  String? timeoutTeam; // 'home' or 'away'
+
   VoidCallback? onBreakStarted;
   VoidCallback? onBreakEnded;
 
@@ -78,6 +83,10 @@ class MatchController extends ChangeNotifier {
     // Reset serving info
     currentGame.startingServer = null;
     currentGame.startingReceiver = null;
+
+    // Reset Timeouts
+    currentGame.homeTimeoutUsed = false;
+    currentGame.awayTimeoutUsed = false;
 
     currentSet = currentGame.sets.last;
     serveCount = 0;
@@ -411,6 +420,56 @@ class MatchController extends ChangeNotifier {
 
   void endBreakEarly() {
     endBreak(early: true);
+  }
+
+  // ----------------------------------------------------
+  // Timeout
+  // ----------------------------------------------------
+  bool timeoutCalledByHome = false;
+  Duration? remainingTimeoutTime;
+
+  void startTimeout({required bool isHome}) {
+    if (isTimeoutActive) return;
+    if (isHome && currentGame.homeTimeoutUsed) return;
+    if (!isHome && currentGame.awayTimeoutUsed) return;
+
+    isTimeoutActive = true;
+    timeoutCalledByHome = isHome;
+    remainingTimeoutTime = const Duration(
+      seconds: TableTennisConfig.timeoutTimer,
+    );
+
+    if (isHome) currentGame.homeTimeoutUsed = true;
+    if (!isHome) currentGame.awayTimeoutUsed = true;
+
+    notifyListeners();
+
+    // Timer countdown
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!isTimeoutActive || remainingTimeoutTime == null) {
+        timer.cancel();
+        return;
+      }
+
+      if (remainingTimeoutTime!.inSeconds <= 1) {
+        endTimeout();
+        timer.cancel();
+      } else {
+        remainingTimeoutTime =
+            remainingTimeoutTime! - const Duration(seconds: 1);
+        notifyListeners();
+      }
+    });
+  }
+
+  void endTimeout() {
+    isTimeoutActive = false;
+    remainingTimeoutTime = null;
+    notifyListeners();
+  }
+
+  void endTimeoutEarly() {
+    endTimeout();
   }
 
   // ----------------------------------------------------

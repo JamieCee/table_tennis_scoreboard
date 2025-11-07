@@ -98,6 +98,56 @@ class _PointsButtonsState extends State<PointsButtons> {
             ),
           ],
         ),
+
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Expanded(
+              child: Visibility(
+                // maintainSize: true,
+                // maintainAnimation: true,
+                // maintainState: true,
+                visible: !widget.ctrl.currentGame.homeTimeoutUsed,
+                child: ElevatedButton(
+                  style: _scoreButtonStyle(Colors.orangeAccent),
+                  onPressed: disableButtons || widget.ctrl.isTimeoutActive
+                      ? null
+                      : () => widget.ctrl.startTimeout(isHome: true),
+                  child: Text(
+                    'Home Timeout',
+                    style: GoogleFonts.oswald(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Visibility(
+                // maintainSize: true,
+                // maintainAnimation: true,
+                // maintainState: true,
+                visible: !widget.ctrl.currentGame.awayTimeoutUsed,
+                child: ElevatedButton(
+                  style: _scoreButtonStyle(Colors.orangeAccent),
+                  onPressed: disableButtons || widget.ctrl.isTimeoutActive
+                      ? null
+                      : () => widget.ctrl.startTimeout(isHome: false),
+                  child: Text(
+                    'Away Timeout',
+                    style: GoogleFonts.oswald(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

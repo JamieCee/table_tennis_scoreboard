@@ -290,6 +290,31 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
+  Widget _timeoutTimer(MatchController ctrl) {
+    return Column(
+      children: [
+        Text(
+          ctrl.timeoutCalledByHome ? "HOME TIMEOUT" : "AWAY TIMEOUT",
+          style: GoogleFonts.oswald(
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            color: Colors.white70,
+            letterSpacing: 2,
+          ),
+        ),
+        Text(
+          "${ctrl.remainingTimeoutTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+          "${ctrl.remainingTimeoutTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
+          style: GoogleFonts.oswald(
+            fontSize: 72,
+            color: Colors.orangeAccent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _gameInfo(MatchController ctrl) {
     final homePlayers = ctrl.currentGame.homePlayers;
     final awayPlayers = ctrl.currentGame.awayPlayers;

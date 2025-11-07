@@ -13,6 +13,7 @@ import 'package:table_tennis_scoreboard/theme.dart';
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
 import '../widgets/themed_dialog.dart';
+import '../widgets/timeout_widget.dart';
 import 'controller/points_buttons.dart';
 import 'match_scorecard_screen.dart';
 
@@ -191,6 +192,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             ],
                           ),
                         ),
+
+                      // --- Timeout Timer ---
+                      if (ctrl.isTimeoutActive) TimeoutTimerWidget(ctrl: ctrl),
 
                       const SizedBox(height: 20),
 

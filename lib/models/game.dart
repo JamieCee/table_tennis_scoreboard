@@ -13,6 +13,10 @@ class Game {
   int homeGamesWon = 0;
   int awayGamesWon = 0;
 
+  // Timeouts per player per game
+  bool homeTimeoutUsed = false;
+  bool awayTimeoutUsed = false;
+
   // For doubles: keep track of who starts serving each set
   Player? startingServer;
   Player? startingReceiver;
