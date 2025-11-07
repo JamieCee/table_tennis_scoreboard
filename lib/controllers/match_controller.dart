@@ -425,6 +425,9 @@ class MatchController extends ChangeNotifier {
   // ----------------------------------------------------
   // Timeout
   // ----------------------------------------------------
+  // ----------------------------------------------------
+  // Timeout
+  // ----------------------------------------------------
   bool timeoutCalledByHome = false;
   Duration? remainingTimeoutTime;
 
@@ -433,19 +436,19 @@ class MatchController extends ChangeNotifier {
     if (isHome && currentGame.homeTimeoutUsed) return;
     if (!isHome && currentGame.awayTimeoutUsed) return;
 
+    // cancel any existing timeout timer just to be safe
+    _timeoutTimer?.cancel();
+
     isTimeoutActive = true;
     timeoutCalledByHome = isHome;
-    remainingTimeoutTime = const Duration(
-      seconds: TableTennisConfig.timeoutTimer,
-    );
+    remainingTimeoutTime = Duration(seconds: TableTennisConfig.timeoutTimer);
 
     if (isHome) currentGame.homeTimeoutUsed = true;
     if (!isHome) currentGame.awayTimeoutUsed = true;
 
     notifyListeners();
 
-    // Timer countdown
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timeoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!isTimeoutActive || remainingTimeoutTime == null) {
         timer.cancel();
         return;
@@ -463,6 +466,8 @@ class MatchController extends ChangeNotifier {
   }
 
   void endTimeout() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
     isTimeoutActive = false;
     remainingTimeoutTime = null;
     notifyListeners();

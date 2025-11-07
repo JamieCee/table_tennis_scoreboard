@@ -220,11 +220,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                     ctrl.home.name,
                     ctrl.matchGamesWonHome,
                     Colors.blueAccent,
+                    usedTimeout: ctrl.currentGame.homeTimeoutUsed,
                   ),
                   _teamBlock(
                     ctrl.away.name,
                     ctrl.matchGamesWonAway,
                     Colors.redAccent,
+                    usedTimeout: ctrl.currentGame.awayTimeoutUsed,
                   ),
                 ],
               ),
@@ -232,7 +234,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
               const SizedBox(height: 8),
 
               // Game Info or Break Timer
-              ctrl.isBreakActive ? _breakTimer(ctrl) : _gameInfo(ctrl),
+              // ctrl.isBreakActive ? _breakTimer(ctrl) : _gameInfo(ctrl),
+              ctrl.isTimeoutActive
+                  ? _timeoutTimer(ctrl)
+                  : ctrl.isBreakActive
+                  ? _breakTimer(ctrl)
+                  : _gameInfo(ctrl),
 
               const SizedBox(height: 2),
 
@@ -389,17 +396,56 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _teamBlock(String name, int score, Color color) {
+  // Widget _teamBlock(String name, int score, Color color) {
+  //   return Column(
+  //     children: [
+  //       Text(
+  //         name,
+  //         style: GoogleFonts.oswald(
+  //           fontSize: 26,
+  //           fontWeight: FontWeight.bold,
+  //           color: color,
+  //           letterSpacing: 1.1,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 4),
+  //       Text(
+  //         "$score",
+  //         style: GoogleFonts.oswald(
+  //           fontSize: 34,
+  //           color: Colors.white,
+  //           fontWeight: FontWeight.w700,
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+  Widget _teamBlock(
+    String name,
+    int score,
+    Color color, {
+    bool usedTimeout = false,
+  }) {
     return Column(
       children: [
-        Text(
-          name,
-          style: GoogleFonts.oswald(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: color,
-            letterSpacing: 1.1,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              style: GoogleFonts.oswald(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: color,
+                letterSpacing: 1.1,
+              ),
+            ),
+            if (usedTimeout)
+              const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Icon(Icons.timer, color: Colors.orangeAccent, size: 18),
+              ),
+          ],
         ),
         const SizedBox(height: 4),
         Text(
