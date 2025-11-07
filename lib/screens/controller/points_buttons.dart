@@ -105,9 +105,6 @@ class _PointsButtonsState extends State<PointsButtons> {
           children: [
             Expanded(
               child: Visibility(
-                // maintainSize: true,
-                // maintainAnimation: true,
-                // maintainState: true,
                 visible: !widget.ctrl.currentGame.homeTimeoutUsed,
                 child: ElevatedButton(
                   style: _scoreButtonStyle(Colors.orangeAccent),
@@ -127,9 +124,6 @@ class _PointsButtonsState extends State<PointsButtons> {
             const SizedBox(width: 16),
             Expanded(
               child: Visibility(
-                // maintainSize: true,
-                // maintainAnimation: true,
-                // maintainState: true,
                 visible: !widget.ctrl.currentGame.awayTimeoutUsed,
                 child: ElevatedButton(
                   style: _scoreButtonStyle(Colors.orangeAccent),

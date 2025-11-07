@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/match_controller.dart';
+import '../../theme.dart';
 
 class PointsCounter extends StatefulWidget {
   const PointsCounter({super.key, required this.ctrl});
@@ -30,6 +31,7 @@ class _PointsCounterState extends State<PointsCounter> {
                   .join(" & "),
               widget.ctrl.currentSet.home,
               widget.ctrl.currentGame.setsWonHome,
+              widget.ctrl.currentGame.homeTimeoutUsed,
             ),
           ),
           const SizedBox(width: 8),
@@ -40,6 +42,7 @@ class _PointsCounterState extends State<PointsCounter> {
                   .join(" & "),
               widget.ctrl.currentSet.away,
               widget.ctrl.currentGame.setsWonAway,
+              widget.ctrl.currentGame.awayTimeoutUsed,
             ),
           ),
         ],
@@ -47,7 +50,7 @@ class _PointsCounterState extends State<PointsCounter> {
     );
   }
 
-  Widget _scoreColumn(String label, int points, int sets) {
+  Widget _scoreColumn(String label, int points, int sets, bool usedTimeout) {
     return Column(
       children: [
         Text(
@@ -62,6 +65,11 @@ class _PointsCounterState extends State<PointsCounter> {
           'Sets: $sets',
           style: const TextStyle(fontSize: 18, color: Colors.grey),
         ),
+        if (usedTimeout)
+          Padding(
+            padding: EdgeInsets.only(left: 6),
+            child: Icon(Icons.timer, color: AppColors.white, size: 18),
+          ),
       ],
     );
   }

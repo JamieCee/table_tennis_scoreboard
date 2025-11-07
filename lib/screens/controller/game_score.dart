@@ -24,11 +24,11 @@ class _GameAndScoreWidgetState extends State<GameAndScoreWidget> {
               'Game ${widget.ctrl.currentGame.order} of ${widget.ctrl.games.length}',
             ),
           ),
-          Center(
-            child: StyledSubHeading(
-              'Match Score: ${widget.ctrl.matchGamesWonHome} - ${widget.ctrl.matchGamesWonAway}',
-            ),
-          ),
+          // Center(
+          //   child: StyledSubHeading(
+          //     'Match Score: ${widget.ctrl.matchGamesWonHome} - ${widget.ctrl.matchGamesWonAway}',
+          //   ),
+          // ),
         ],
       ),
     );
