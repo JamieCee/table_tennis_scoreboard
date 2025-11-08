@@ -49,7 +49,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0A2342),
       body: SafeArea(
@@ -65,7 +64,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                     Icon(
                       Icons.sports_tennis,
                       size: 80,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -130,7 +129,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 8,
-                  shadowColor: Colors.greenAccent.withOpacity(0.6),
+                  shadowColor: Colors.greenAccent.withValues(alpha: 0.6),
                 ),
                 onPressed: _startMatch,
               ),
@@ -150,12 +149,12 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -193,7 +192,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: _inputDecoration(
                 'Player ${i + 1}',
-                color.withOpacity(0.9),
+                color.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 8),
@@ -206,17 +205,17 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   InputDecoration _inputDecoration(String label, Color color) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: color.withOpacity(0.9)),
+      labelStyle: TextStyle(color: color.withValues(alpha: 0.9)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: color.withOpacity(0.5)),
+        borderSide: BorderSide(color: color.withValues(alpha: 0.5)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: color, width: 2),
       ),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withValues(alpha: 0.05),
     );
   }
 }

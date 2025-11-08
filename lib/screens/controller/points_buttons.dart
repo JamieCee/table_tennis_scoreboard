@@ -17,7 +17,9 @@ class _PointsButtonsState extends State<PointsButtons> {
   @override
   Widget build(BuildContext context) {
     final bool disableButtons =
-        widget.ctrl.isBreakActive || !widget.ctrl.isGameEditable;
+        widget.ctrl.isBreakActive ||
+        !widget.ctrl.isGameEditable ||
+        widget.ctrl.isTimeoutActive;
 
     return Column(
       children: [

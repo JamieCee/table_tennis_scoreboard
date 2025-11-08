@@ -53,12 +53,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
       _ctrl.onServerSelectionNeeded = () =>
           _showServerReceiverPicker(context, _ctrl);
 
-      // Optionally trigger the picker immediately on load.
-      if (widget.showDialogOnLoad) {
-        final game = _ctrl.currentGame;
+      // ---------------------------
+      // FIRST GAME: Trigger dialog
+      // ---------------------------
+      final game = _ctrl.currentGame;
+      if (!_ctrl.isTransitioning) {
+        // only for first game
         if (game.isDoubles && game.homePlayers.isEmpty) {
           _showDoublesPlayerPicker(context, _ctrl);
-        } else {
+        } else if (game.startingServer == null) {
           _showServerReceiverPicker(context, _ctrl);
         }
       }
@@ -71,27 +74,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
     _ctrl.onDoublesPlayersNeeded = null;
     _ctrl.onServerSelectionNeeded = null;
     super.dispose();
-  }
-
-  /// --------------------------------------------------------------
-  /// Start a break timer. The controller marks break active, and
-  /// this widget counts down, updating UI once per second.
-  /// --------------------------------------------------------------
-  void _startBreak() {
-    _ctrl.startBreak();
-    _breakTimer?.cancel();
-
-    _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_ctrl.remainingBreakTime == null ||
-          _ctrl.remainingBreakTime!.inSeconds <= 0) {
-        timer.cancel();
-        _ctrl.endBreak();
-      } else {
-        _ctrl.remainingBreakTime =
-            _ctrl.remainingBreakTime! - const Duration(seconds: 1);
-        _ctrl.notifyListeners();
-      }
-    });
   }
 
   /// --------------------------------------------------------------

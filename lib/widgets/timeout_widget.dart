@@ -18,9 +18,9 @@ class TimeoutTimerWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.midnightBlue.withOpacity(0.8),
+        color: AppColors.midnightBlue.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orangeAccent.withOpacity(0.5)),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [

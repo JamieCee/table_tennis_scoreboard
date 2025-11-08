@@ -43,10 +43,10 @@ class BreakTimerWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.midnightBlue.withOpacity(0.8),
+        color: AppColors.midnightBlue.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.yellowAccent.withOpacity(0.5),
+          color: Colors.yellowAccent.withValues(alpha: 0.5),
           width: 1.5,
         ),
         boxShadow: const [

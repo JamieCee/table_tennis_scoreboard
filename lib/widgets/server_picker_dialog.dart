@@ -114,7 +114,7 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
               ),
               selectedColor: color,
               backgroundColor: Colors.white10,
-              side: BorderSide(color: color.withOpacity(0.4)),
+              side: BorderSide(color: color.withValues(alpha: 0.4)),
               onSelected: (_) => setState(() => _selectedServer = p),
             );
           }).toList(),

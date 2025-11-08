@@ -365,7 +365,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white10.withOpacity(0.05),
+        color: Colors.white10.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white12),
       ),
@@ -498,8 +498,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: color.withOpacity(0.15),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         "$setsWon Sets",
@@ -517,7 +517,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12),
       ),

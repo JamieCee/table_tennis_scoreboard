@@ -58,7 +58,7 @@ class _DoublesServerPickerState extends State<DoublesServerPicker> {
             const SizedBox(height: 24),
             DropdownButtonFormField<Player>(
               decoration: const InputDecoration(labelText: "Server"),
-              value: selectedServer,
+              initialValue: selectedServer,
               items: [...selectedHomePlayers, ...selectedAwayPlayers].map((p) {
                 return DropdownMenuItem(value: p, child: Text(p.name));
               }).toList(),
@@ -66,7 +66,7 @@ class _DoublesServerPickerState extends State<DoublesServerPicker> {
             ),
             DropdownButtonFormField<Player>(
               decoration: const InputDecoration(labelText: "Receiver"),
-              value: selectedReceiver,
+              initialValue: selectedReceiver,
               items: [...selectedHomePlayers, ...selectedAwayPlayers].map((p) {
                 return DropdownMenuItem(value: p, child: Text(p.name));
               }).toList(),

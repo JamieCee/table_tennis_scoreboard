@@ -106,8 +106,8 @@ class MatchScorecardScreen extends StatelessWidget {
                               return Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.midnightBlue.withOpacity(
-                                    0.7,
+                                  color: AppColors.midnightBlue.withValues(
+                                    alpha: 0.7,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
