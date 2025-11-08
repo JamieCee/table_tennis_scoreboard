@@ -180,39 +180,41 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.midnightBlue,
-      appBar: AppBar(
-        backgroundColor: Colors.black87,
-        elevation: 4,
-        title: Text(
-          'Match Scoreboard',
-          style: GoogleFonts.oswald(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_remote, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChangeNotifierProvider.value(
-                    value: ctrl,
-                    child: const ControllerScreen(),
-                  ),
+      appBar: ctrl.isObserver
+          ? null
+          : AppBar(
+              backgroundColor: Colors.black87,
+              elevation: 4,
+              title: Text(
+                'Match Scoreboard',
+                style: GoogleFonts.oswald(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings_remote, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChangeNotifierProvider.value(
+                          value: ctrl,
+                          child: const ControllerScreen(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: ListView(
             children: [
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -230,15 +232,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 28),
               ctrl.isTimeoutActive
                   ? _timeoutTimer(ctrl)
                   : ctrl.isBreakActive
                   ? _breakTimer(ctrl)
                   : _gameInfo(ctrl),
-              const SizedBox(height: 2),
+              const SizedBox(height: 28),
               _mainScoreboard(ctrl),
-              const SizedBox(height: 2),
+              const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -246,8 +248,9 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   _setSummary(ctrl.currentGame.setsWonAway, Colors.redAccent),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
               _matchOverviewFooter(ctrl),
+              const SizedBox(height: 20),
             ],
           ),
         ),

@@ -209,7 +209,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      "Game Code: ${matchController.matchId}",
+                      "${matchController.matchId}",
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
