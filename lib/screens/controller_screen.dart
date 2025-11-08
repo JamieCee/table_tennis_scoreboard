@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +24,7 @@ import '../widgets/transition_overlay.dart';
 /// --------------------------------------------------------------
 /// Main match controller screen — handles gameplay flow, breaks,
 /// timeouts, next-game transitions, and quick navigation.
+/// Observer mode disables buttons and only shows the scoreboard.
 /// --------------------------------------------------------------
 class ControllerScreen extends StatefulWidget {
   final bool showDialogOnLoad;
@@ -41,31 +43,28 @@ class _ControllerScreenState extends State<ControllerScreen> {
     super.initState();
     _ctrl = context.read<MatchController>();
 
-    // Register callbacks for when the controller needs user input.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Register callbacks for when the controller needs user input
+    if (!_ctrl.isObserver) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
 
-      // Called when a doubles match needs players picked.
-      _ctrl.onDoublesPlayersNeeded = () =>
-          _showDoublesPlayerPicker(context, _ctrl);
+        _ctrl.onDoublesPlayersNeeded = () =>
+            _showDoublesPlayerPicker(context, _ctrl);
 
-      // Called when the server for a game must be chosen.
-      _ctrl.onServerSelectionNeeded = () =>
-          _showServerReceiverPicker(context, _ctrl);
+        _ctrl.onServerSelectionNeeded = () =>
+            _showServerReceiverPicker(context, _ctrl);
 
-      // ---------------------------
-      // FIRST GAME: Trigger dialog
-      // ---------------------------
-      final game = _ctrl.currentGame;
-      if (!_ctrl.isTransitioning) {
-        // only for first game
-        if (game.isDoubles && game.homePlayers.isEmpty) {
-          _showDoublesPlayerPicker(context, _ctrl);
-        } else if (game.startingServer == null) {
-          _showServerReceiverPicker(context, _ctrl);
+        // FIRST GAME: Trigger dialog if needed
+        final game = _ctrl.currentGame;
+        if (!_ctrl.isTransitioning) {
+          if (game.isDoubles && game.homePlayers.isEmpty) {
+            _showDoublesPlayerPicker(context, _ctrl);
+          } else if (game.startingServer == null) {
+            _showServerReceiverPicker(context, _ctrl);
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   @override
@@ -76,25 +75,19 @@ class _ControllerScreenState extends State<ControllerScreen> {
     super.dispose();
   }
 
-  /// --------------------------------------------------------------
-  /// Build method — handles all major UI pieces.
-  /// --------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final ctrl = context.watch<MatchController>();
 
     return Stack(
       children: [
-        // ----- Main Controller Scaffold -----
         Scaffold(
           backgroundColor: AppColors.charcoal,
           appBar: _buildAppBar(context, ctrl),
           body: _buildMainBody(ctrl),
           bottomNavigationBar: _buildBottomBar(context),
         ),
-
-        // ----- Transition Overlay -----
-        if (ctrl.isTransitioning && ctrl.isNextGameReady)
+        if (!_ctrl.isObserver && ctrl.isTransitioning && ctrl.isNextGameReady)
           TransitionOverlay(
             gameNumber: ctrl.nextGamePreview!.order,
             totalGames: ctrl.games.length,
@@ -105,10 +98,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
       ],
     );
   }
-
-  // --------------------------------------------------------------
-  // BUILD HELPERS
-  // --------------------------------------------------------------
 
   AppBar _buildAppBar(BuildContext context, MatchController ctrl) {
     return AppBar(
@@ -152,7 +141,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Make the main content scrollable
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -165,9 +153,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     const SizedBox(height: 16),
                     PointsCounter(ctrl: _ctrl),
                     const SizedBox(height: 30),
-                    PointsButtons(ctrl: _ctrl),
+                    if (!_ctrl.isObserver) PointsButtons(ctrl: _ctrl),
                     const SizedBox(height: 24),
-                    if (_isMatchOver(ctrl)) _buildCompleteMatchButton(ctrl),
+                    if (!_ctrl.isObserver && _isMatchOver(ctrl))
+                      _buildCompleteMatchButton(ctrl),
                   ],
                 ),
               ),
@@ -179,20 +168,73 @@ class _ControllerScreenState extends State<ControllerScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context) {
+    final matchController = Provider.of<MatchController>(
+      context,
+      listen: false,
+    );
+
     return BottomAppBar(
       color: AppColors.midnightBlue,
       elevation: 8,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        child: StyledIconButton(
-          color: AppColors.turkeyRed,
-          onPressed: () => Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
-            (_) => false,
-          ),
-          icon: const Icon(Icons.refresh, color: Colors.white),
-          child: const Text("Reset App", style: TextStyle(color: Colors.white)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (!_ctrl.isObserver)
+              StyledIconButton(
+                color: AppColors.turkeyRed,
+                onPressed: () => Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
+                  (_) => false,
+                ),
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                child: const Text(
+                  "Reset App",
+                  style: TextStyle(color: Colors.white),
+                ),
+              )
+            else
+              const SizedBox(
+                width: 48,
+              ), // placeholder to keep layout consistent
+
+            const SizedBox(width: 12),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Icon(Icons.vpn_key, color: Colors.white70),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      "Game Code: ${matchController.matchId}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, color: Colors.white70),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: matchController.matchId),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Game code copied to clipboard"),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -219,10 +261,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
   String _teamNames(List<Player> specific, dynamic team) => specific.isNotEmpty
       ? specific.map((p) => p.name).join(' & ')
       : team.players.map((p) => p.name).join(' & ');
-
-  // --------------------------------------------------------------
-  // Dialog helpers (keep KISS — short, contained, and reusable)
-  // --------------------------------------------------------------
 
   void _showDoublesPlayerPicker(BuildContext context, MatchController ctrl) {
     showDialog(

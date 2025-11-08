@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +28,18 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     (i) => TextEditingController(text: 'A${i + 1}'),
   );
 
-  void _startMatch() {
+  String _generateMatchId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        6,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
+    );
+  }
+
+  void _startMatch() async {
     final home = Team(
       name: _homeNameController.text,
       players: _homePlayers.map((c) => Player(c.text)).toList(),
@@ -36,12 +49,22 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       players: _awayPlayers.map((c) => Player(c.text)).toList(),
     );
 
+    final matchId = _generateMatchId();
+    final controller = MatchController(
+      home: home,
+      away: away,
+      matchId: matchId,
+    );
+
+    // Create Firestore document
+    await controller.createMatchInFirestore();
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider(
-          create: (_) => MatchController(home: home, away: away),
-          child: const ControllerScreen(showDialogOnLoad: false),
+        builder: (_) => ChangeNotifierProvider.value(
+          value: controller,
+          child: const ControllerScreen(),
         ),
       ),
     );
@@ -57,7 +80,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Header ---
               Center(
                 child: Column(
                   children: [
@@ -85,10 +107,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // --- Team Inputs ---
               _teamCard(
                 label: "Home Team",
                 color: Colors.blueAccent,
@@ -104,10 +123,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                 players: _awayPlayers,
                 icon: Icons.flight_takeoff,
               ),
-
               const SizedBox(height: 36),
-
-              // --- Start Button ---
               ElevatedButton.icon(
                 icon: const Icon(Icons.play_arrow, size: 28),
                 label: Text(

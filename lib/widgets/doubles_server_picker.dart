@@ -122,7 +122,7 @@ class _DoublesServerPickerState extends State<DoublesServerPicker> {
             value: selectedPlayers.contains(p),
             onChanged: (selected) => onSelected(p, selected ?? false),
           );
-        }).toList(),
+        }),
       ],
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
@@ -25,26 +26,33 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     super.initState();
     _ctrl = context.read<MatchController>();
 
-    // --- Hook up callbacks so dialogs appear automatically ---
-    _ctrl.onDoublesPlayersNeeded = () => _showDoublesPicker();
-    _ctrl.onServerSelectionNeeded = () => _showServerPicker();
+    _ctrl.onMatchDeleted = () {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    };
+
+    if (!_ctrl.isObserver) {
+      _ctrl.onDoublesPlayersNeeded = () => _showDoublesPicker();
+      _ctrl.onServerSelectionNeeded = () => _showServerPicker();
+    }
   }
 
   @override
   void dispose() {
-    _ctrl.onDoublesPlayersNeeded = null;
-    _ctrl.onServerSelectionNeeded = null;
+    _ctrl.onMatchDeleted = null;
+    if (!_ctrl.isObserver) {
+      _ctrl.onDoublesPlayersNeeded = null;
+      _ctrl.onServerSelectionNeeded = null;
+    }
     super.dispose();
   }
 
-  // ----------------------------------------------------------------------
-  // Dialogs
-  // ----------------------------------------------------------------------
-
   void _showDoublesPicker() {
-    if (!mounted) return;
-    if (ModalRoute.of(context)?.isCurrent != true) return;
-
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -56,9 +64,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   void _showServerPicker() {
-    if (!mounted) return;
-    if (ModalRoute.of(context)?.isCurrent != true) return;
-
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     Player? selectedServer;
 
     showDialog(
@@ -152,7 +158,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                             )
                             ? _ctrl.currentGame.awayPlayers.first
                             : _ctrl.currentGame.homePlayers.first;
-
                         _ctrl.setServer(selectedServer, receiver);
                         Navigator.pop(context);
                       },
@@ -168,10 +173,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       ),
     );
   }
-
-  // ----------------------------------------------------------------------
-  // UI
-  // ----------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +213,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Team names + match games
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -230,25 +230,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
-
-              // Game Info or Break Timer
-              // ctrl.isBreakActive ? _breakTimer(ctrl) : _gameInfo(ctrl),
               ctrl.isTimeoutActive
                   ? _timeoutTimer(ctrl)
                   : ctrl.isBreakActive
                   ? _breakTimer(ctrl)
                   : _gameInfo(ctrl),
-
               const SizedBox(height: 2),
-
-              // Main Scoreboard
               _mainScoreboard(ctrl),
-
               const SizedBox(height: 2),
-
-              // Sets summary
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -256,10 +246,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   _setSummary(ctrl.currentGame.setsWonAway, Colors.redAccent),
                 ],
               ),
-
               const SizedBox(height: 20),
-
-              // Footer
               _matchOverviewFooter(ctrl),
             ],
           ),
@@ -268,11 +255,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  // ----------------------------------------------------------------------
-  // Helper Widgets
-  // ----------------------------------------------------------------------
-
   Widget _breakTimer(MatchController ctrl) {
+    final remainingTime = ctrl.remainingBreakTime ?? Duration.zero;
     return Column(
       children: [
         Text(
@@ -285,8 +269,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           ),
         ),
         Text(
-          "${ctrl.remainingBreakTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
-          "${ctrl.remainingBreakTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
+          "${remainingTime.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+          "${remainingTime.inSeconds.remainder(60).toString().padLeft(2, '0')}",
           style: GoogleFonts.oswald(
             fontSize: 72,
             color: Colors.greenAccent,
@@ -298,6 +282,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   Widget _timeoutTimer(MatchController ctrl) {
+    final remainingTime = ctrl.remainingTimeoutTime ?? Duration.zero;
     return Column(
       children: [
         Text(
@@ -310,8 +295,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           ),
         ),
         Text(
-          "${ctrl.remainingTimeoutTime!.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
-          "${ctrl.remainingTimeoutTime!.inSeconds.remainder(60).toString().padLeft(2, '0')}",
+          "${remainingTime.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+          "${remainingTime.inSeconds.remainder(60).toString().padLeft(2, '0')}",
           style: GoogleFonts.oswald(
             fontSize: 72,
             color: Colors.orangeAccent,
@@ -365,7 +350,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white10.withValues(alpha: 0.05),
+        color: Colors.white10.withAlpha(5),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white12),
       ),
@@ -396,30 +381,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  // Widget _teamBlock(String name, int score, Color color) {
-  //   return Column(
-  //     children: [
-  //       Text(
-  //         name,
-  //         style: GoogleFonts.oswald(
-  //           fontSize: 26,
-  //           fontWeight: FontWeight.bold,
-  //           color: color,
-  //           letterSpacing: 1.1,
-  //         ),
-  //       ),
-  //       const SizedBox(height: 4),
-  //       Text(
-  //         "$score",
-  //         style: GoogleFonts.oswald(
-  //           fontSize: 34,
-  //           color: Colors.white,
-  //           fontWeight: FontWeight.w700,
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
   Widget _teamBlock(
     String name,
     int score,
@@ -498,8 +459,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: color.withValues(alpha: 0.15),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color.withAlpha(15),
+        border: Border.all(color: color.withAlpha(40)),
       ),
       child: Text(
         "$setsWon Sets",
@@ -517,7 +478,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white.withAlpha(5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12),
       ),

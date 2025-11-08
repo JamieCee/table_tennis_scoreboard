@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/game.dart';
@@ -8,41 +9,22 @@ import '../models/set_score.dart';
 import '../models/team.dart';
 import '../shared/configuration.dart';
 
-/// --------------------------------------------------------------
-/// MatchController manages the full match state:
-/// - Scores
-/// - Sets & games
-/// - Breaks
-/// - Timeouts
-/// - Server rotation (singles/doubles)
-/// - Next game transitions
-/// --------------------------------------------------------------
 class MatchController extends ChangeNotifier {
+  final String matchId;
   final Team home;
   final Team away;
+  final bool isObserver;
 
-  /// List of all games
+  late final CollectionReference _matchesCollection;
   late List<Game> games;
-
-  /// Current game and set
   late Game currentGame;
   late SetScore currentSet;
 
-  /// Callbacks for dialogs
-  VoidCallback? onDoublesPlayersNeeded;
-  VoidCallback? onServerSelectionNeeded;
-
-  /// Match score counters
-  int matchGamesWonHome = 0;
-  int matchGamesWonAway = 0;
-
-  /// Current server and receiver tracking
   Player? currentServer;
   Player? currentReceiver;
   int serveCount = 0;
   bool deuce = false;
 
-  /// Break timer state
   Duration breakDuration = Duration(seconds: TableTennisConfig.setBreak);
   Duration? remainingBreakTime;
   bool isBreakActive = false;
@@ -50,42 +32,59 @@ class MatchController extends ChangeNotifier {
   VoidCallback? onBreakStarted;
   VoidCallback? onBreakEnded;
 
-  /// Timeout state
   bool isTimeoutActive = false;
   bool timeoutCalledByHome = false;
   Duration? remainingTimeoutTime;
   Timer? _timeoutTimer;
 
-  /// Next game transition
+  int matchGamesWonHome = 0;
+  int matchGamesWonAway = 0;
+
   bool isTransitioning = false;
   bool isNextGameReady = false;
   Game? nextGamePreview;
 
-  /// --------------------------------------------------------------
-  /// Constructor
-  /// --------------------------------------------------------------
-  MatchController({required this.home, required this.away}) {
+  VoidCallback? onDoublesPlayersNeeded;
+  VoidCallback? onServerSelectionNeeded;
+  VoidCallback? onMatchDeleted;
+
+  MatchController({
+    required this.home,
+    required this.away,
+    required this.matchId,
+    this.isObserver = false,
+  }) {
+    _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
     _loadGame(0);
+    if (!isObserver) {
+      createMatchInFirestore();
+    }
+    _listenToFirestore();
   }
 
-  // --------------------------------------------------------------
-  // INITIALIZATION
-  // --------------------------------------------------------------
-
-  /// Prepare all games for the match
   void _initializeGames() {
     final playerCombinations = [
-      [home.players[0]], [away.players[1]], // 1 v 2
-      [home.players[2]], [away.players[0]], // 3 v 1
-      [home.players[1]], [away.players[2]], // 2 v 3
-      [home.players[2]], [away.players[1]], // 3 v 2
-      [], [], // Game 5 = doubles
-      [home.players[0]], [away.players[2]], // 1 v 3
-      [home.players[1]], [away.players[0]], // 2 v 1
-      [home.players[2]], [away.players[2]], // 3 v 3
-      [home.players[1]], [away.players[1]], // 2 v 2
-      [home.players[0]], [away.players[0]], // 1 v 1
+      [home.players[0]],
+      [away.players[1]],
+      [home.players[2]],
+      [away.players[0]],
+      [home.players[1]],
+      [away.players[2]],
+      [home.players[2]],
+      [away.players[1]],
+      [],
+      [],
+      [home.players[0]],
+      [away.players[2]],
+      [home.players[1]],
+      [away.players[0]],
+      [home.players[2]],
+      [away.players[2]],
+      [home.players[1]],
+      [away.players[1]],
+      [home.players[0]],
+      [away.players[0]],
     ];
 
     games = [];
@@ -93,7 +92,7 @@ class MatchController extends ChangeNotifier {
       games.add(
         Game(
           order: (i ~/ 2) + 1,
-          isDoubles: i == 8, // Hardcoded doubles (Game 5)
+          isDoubles: i == 8,
           homePlayers: List.from(playerCombinations[i]),
           awayPlayers: List.from(playerCombinations[i + 1]),
         ),
@@ -101,67 +100,155 @@ class MatchController extends ChangeNotifier {
     }
   }
 
-  /// Loads a specific game
   void _loadGame(int index) {
+    if (index < 0 || index >= games.length) return;
     currentGame = games[index];
-
-    // Reset game state
-    currentGame.startingServer = null;
-    currentGame.startingReceiver = null;
-    currentGame.homeTimeoutUsed = false;
-    currentGame.awayTimeoutUsed = false;
-
+    if (currentGame.sets.isEmpty) {
+      currentGame.sets.add(SetScore());
+    }
     currentSet = currentGame.sets.last;
     currentServer = null;
     currentReceiver = null;
     serveCount = 0;
     deuce = false;
+    notifyListeners();
+  }
+
+  Future<void> createMatchInFirestore() async {
+    await _matchesCollection.doc(matchId).set(toMap());
+  }
+
+  void _listenToFirestore() {
+    _matchesCollection.doc(matchId).snapshots().listen((snapshot) {
+      if (!snapshot.exists) {
+        onMatchDeleted?.call();
+        return;
+      }
+      final data = snapshot.data() as Map<String, dynamic>;
+      _updateFromMap(data);
+    });
+  }
+
+  void _pushToFirestore() {
+    if (isObserver) return;
+    _matchesCollection.doc(matchId).set(toMap(), SetOptions(merge: true));
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'home': {
+        'name': home.name,
+        'players': home.players.map((p) => p.name).toList(),
+      },
+      'away': {
+        'name': away.name,
+        'players': away.players.map((p) => p.name).toList(),
+      },
+      'currentGameIndex': games.indexOf(currentGame),
+      'matchGamesWonHome': matchGamesWonHome,
+      'matchGamesWonAway': matchGamesWonAway,
+      'games': games.map((g) => g.toMap()).toList(),
+      'break': {
+        'isActive': isBreakActive,
+        'remainingSeconds': remainingBreakTime?.inSeconds ?? 0,
+      },
+      'timeout': {
+        'isActive': isTimeoutActive,
+        'team': timeoutCalledByHome ? 'home' : 'away',
+        'remainingSeconds': remainingTimeoutTime?.inSeconds ?? 0,
+      },
+      'currentServer': currentServer?.name,
+      'currentReceiver': currentReceiver?.name,
+      'serveCount': serveCount,
+      'deuce': deuce,
+    };
+  }
+
+  void _updateFromMap(Map<String, dynamic> data) {
+    matchGamesWonHome = data['matchGamesWonHome'] ?? matchGamesWonHome;
+    matchGamesWonAway = data['matchGamesWonAway'] ?? matchGamesWonAway;
+
+    final gamesData =
+        (data['games'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    if (gamesData.isNotEmpty) {
+      games = List.generate(
+        gamesData.length,
+        (i) => Game.fromMap(gamesData[i]),
+      );
+    }
+
+    int gameIndex = data['currentGameIndex'] ?? 0;
+    if (games.isNotEmpty) {
+      gameIndex = gameIndex.clamp(0, games.length - 1);
+      currentGame = games[gameIndex];
+      if (currentGame.sets.isEmpty) currentGame.sets.add(SetScore());
+      currentSet = currentGame.sets.last;
+    }
+
+    final breakData = data['break'] as Map<String, dynamic>? ?? {};
+    isBreakActive = breakData['isActive'] ?? false;
+
+    final timeoutData = data['timeout'] as Map<String, dynamic>? ?? {};
+    isTimeoutActive = timeoutData['isActive'] ?? false;
+    timeoutCalledByHome = timeoutData['team'] == 'home';
+
+    if (isObserver) {
+      remainingBreakTime = Duration(
+        seconds: breakData['remainingSeconds'] ?? 0,
+      );
+      remainingTimeoutTime = Duration(
+        seconds: timeoutData['remainingSeconds'] ?? 0,
+      );
+    }
+
+    currentServer = data['currentServer'] != null
+        ? Player(data['currentServer']!)
+        : null;
+    currentReceiver = data['currentReceiver'] != null
+        ? Player(data['currentReceiver']!)
+        : null;
+    serveCount = data['serveCount'] ?? serveCount;
+    deuce = data['deuce'] ?? deuce;
 
     notifyListeners();
   }
 
-  // --------------------------------------------------------------
-  // SCORING
-  // --------------------------------------------------------------
-
   void addPointHome() {
-    if (isBreakActive) return;
+    if (isObserver || isBreakActive || isTimeoutActive) return;
     currentSet.home++;
     _afterPoint();
   }
 
   void addPointAway() {
-    if (isBreakActive) return;
+    if (isObserver || isBreakActive || isTimeoutActive) return;
     currentSet.away++;
     _afterPoint();
   }
 
   void undoPointHome() {
-    if (isBreakActive || currentSet.home == 0) return;
+    if (isObserver || isBreakActive || isTimeoutActive || currentSet.home == 0)
+      return;
     currentSet.home--;
+    _pushToFirestore();
     notifyListeners();
   }
 
   void undoPointAway() {
-    if (isBreakActive || currentSet.away == 0) return;
+    if (isObserver || isBreakActive || isTimeoutActive || currentSet.away == 0)
+      return;
     currentSet.away--;
+    _pushToFirestore();
     notifyListeners();
   }
 
-  /// Called after any point is added
   void _afterPoint() {
     serveCount++;
     _maybeRotateServer();
     _checkSetEnd();
+    _pushToFirestore();
     notifyListeners();
   }
 
-  bool get isCurrentGameCompleted =>
-      currentGame.setsWonHome == 3 || currentGame.setsWonAway == 3;
-
-  bool get isGameEditable => !isCurrentGameCompleted && !isBreakActive;
-
-  /// Check if current set is complete and handle set/game progression
   void _checkSetEnd() {
     final home = currentSet.home;
     final away = currentSet.away;
@@ -181,37 +268,35 @@ class MatchController extends ChangeNotifier {
     }
   }
 
-  // --------------------------------------------------------------
-  // SERVER MANAGEMENT
-  // --------------------------------------------------------------
+  bool get isCurrentGameCompleted =>
+      currentGame.setsWonHome == 3 || currentGame.setsWonAway == 3;
+
+  bool get isGameEditable =>
+      !isCurrentGameCompleted && !isBreakActive && !isTimeoutActive;
+
+  bool get isMatchOver => matchGamesWonHome == 5 || matchGamesWonAway == 5;
+
+  void setServer(Player? server, Player? receiver) {
+    if (isObserver) return;
+    currentGame.startingServer = server;
+    currentGame.startingReceiver = receiver;
+    _setFirstServerOfSet();
+    _pushToFirestore();
+  }
 
   void _setFirstServerOfSet() {
     final server = currentGame.startingServer;
     final receiver = currentGame.startingReceiver;
     if (server == null || receiver == null) return;
 
-    if (currentGame.isDoubles) {
+    if (!currentGame.isDoubles && (currentGame.sets.length - 1) % 2 != 0) {
+      currentServer = receiver;
+      currentReceiver = server;
+    } else {
       currentServer = server;
       currentReceiver = receiver;
-    } else {
-      if ((currentGame.sets.length - 1) % 2 == 0) {
-        currentServer = server;
-        currentReceiver = receiver;
-      } else {
-        currentServer = receiver;
-        currentReceiver = server;
-      }
     }
     serveCount = 0;
-  }
-
-  void setServer(Player? server, Player? receiver) {
-    currentGame.startingServer = server;
-    currentGame.startingReceiver = receiver;
-    currentServer = server;
-    currentReceiver = receiver;
-    serveCount = 0;
-    notifyListeners();
   }
 
   void _maybeRotateServer() {
@@ -230,9 +315,8 @@ class MatchController extends ChangeNotifier {
 
   void _rotateDoublesServer() {
     if (currentGame.homePlayers.length < 2 ||
-        currentGame.awayPlayers.length < 2) {
+        currentGame.awayPlayers.length < 2)
       return;
-    }
 
     final h1 = currentGame.homePlayers[0];
     final h2 = currentGame.homePlayers[1];
@@ -257,90 +341,82 @@ class MatchController extends ChangeNotifier {
     }
   }
 
-  void flipServerAndReceiver() {
-    final temp = currentServer;
-    currentServer = currentReceiver;
-    currentReceiver = temp;
-    notifyListeners();
-  }
+  void startBreak() {
+    if (isObserver) return;
 
-  // --------------------------------------------------------------
-  // BREAKS
-  // --------------------------------------------------------------
-
-  void startBreak({Duration? duration}) {
-    remainingBreakTime = duration ?? breakDuration;
+    remainingBreakTime = breakDuration;
     isBreakActive = true;
     onBreakStarted?.call();
-    notifyListeners();
 
     _breakTimer?.cancel();
     _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (remainingBreakTime == null) return;
-      if (remainingBreakTime!.inSeconds <= 0) {
-        endBreak();
+      if (remainingBreakTime == null || remainingBreakTime!.inSeconds <= 0) {
         timer.cancel();
+        endBreak();
       } else {
         remainingBreakTime = remainingBreakTime! - const Duration(seconds: 1);
+        _pushToFirestore();
         notifyListeners();
       }
     });
-  }
 
-  void endBreak({bool early = false}) {
-    _breakTimer?.cancel();
-    _breakTimer = null;
-    isBreakActive = false;
-    onBreakEnded?.call();
-
-    if (!isCurrentGameCompleted) {
-      currentGame.sets.add(SetScore());
-      currentSet = currentGame.sets.last;
-      _setFirstServerOfSet();
-      serveCount = 0;
-    }
-
+    _pushToFirestore();
     notifyListeners();
   }
 
-  void endBreakEarly() => endBreak(early: true);
+  void endBreak() {
+    _breakTimer?.cancel();
+    _breakTimer = null;
+    isBreakActive = false;
+    remainingBreakTime = null;
+    onBreakEnded?.call();
 
-  // --------------------------------------------------------------
-  // TIMEOUTS
-  // --------------------------------------------------------------
-
-  void startTimeout({required bool isHome}) {
-    if (isTimeoutActive) return;
-    if ((isHome && currentGame.homeTimeoutUsed) ||
-        (!isHome && currentGame.awayTimeoutUsed)) {
-      return;
+    if (!isObserver && !isCurrentGameCompleted) {
+      currentGame.sets.add(SetScore());
+      currentSet = currentGame.sets.last;
+      _setFirstServerOfSet();
     }
 
-    _timeoutTimer?.cancel();
+    if (!isObserver) _pushToFirestore();
+    notifyListeners();
+  }
+
+  void endBreakEarly() {
+    if (isObserver) return;
+    endBreak();
+  }
+
+  void startTimeout({required bool isHome}) {
+    if (isObserver || isTimeoutActive) return;
+    if ((isHome && currentGame.homeTimeoutUsed) ||
+        (!isHome && currentGame.awayTimeoutUsed))
+      return;
+
     isTimeoutActive = true;
     timeoutCalledByHome = isHome;
     remainingTimeoutTime = Duration(seconds: TableTennisConfig.timeoutTimer);
 
-    if (isHome) currentGame.homeTimeoutUsed = true;
-    if (!isHome) currentGame.awayTimeoutUsed = true;
+    if (isHome)
+      currentGame.homeTimeoutUsed = true;
+    else
+      currentGame.awayTimeoutUsed = true;
 
-    notifyListeners();
-
+    _timeoutTimer?.cancel();
     _timeoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!isTimeoutActive || remainingTimeoutTime == null) {
+      if (remainingTimeoutTime == null ||
+          remainingTimeoutTime!.inSeconds <= 0) {
         timer.cancel();
-        return;
-      }
-
-      if (remainingTimeoutTime!.inSeconds <= 1) {
         endTimeout();
-        timer.cancel();
       } else {
         remainingTimeoutTime =
             remainingTimeoutTime! - const Duration(seconds: 1);
+        _pushToFirestore();
         notifyListeners();
       }
     });
+
+    _pushToFirestore();
+    notifyListeners();
   }
 
   void endTimeout() {
@@ -348,32 +424,32 @@ class MatchController extends ChangeNotifier {
     _timeoutTimer = null;
     isTimeoutActive = false;
     remainingTimeoutTime = null;
+    if (!isObserver) _pushToFirestore();
     notifyListeners();
   }
 
-  void endTimeoutEarly() => endTimeout();
+  void endTimeoutEarly() {
+    if (isObserver) return;
+    endTimeout();
+  }
 
-  // --------------------------------------------------------------
-  // GAME PROGRESSION
-  // --------------------------------------------------------------
-
-  Future<void> _completeGame() async {
+  void _completeGame() {
     if (currentGame.setsWonHome > currentGame.setsWonAway) {
       matchGamesWonHome++;
     } else {
       matchGamesWonAway++;
     }
 
-    if (currentGame.order < games.length) {
+    if (!isMatchOver && currentGame.order < games.length) {
       nextGamePreview = games[currentGame.order];
       isTransitioning = true;
       isNextGameReady = true;
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   void startNextGame() {
-    if (nextGamePreview == null) return;
+    if (nextGamePreview == null || isObserver) return;
 
     isTransitioning = false;
     isNextGameReady = false;
@@ -388,51 +464,26 @@ class MatchController extends ChangeNotifier {
       }
     });
 
+    _pushToFirestore();
     notifyListeners();
   }
 
-  /// --------------------------------------------------------------
-  /// Set the home and away players for a doubles match
-  /// Called after the user selects players in the doubles picker dialog
-  /// --------------------------------------------------------------
   void setDoublesPlayers(List<Player> home, List<Player> away) {
+    if (isObserver) return;
     currentGame.homePlayers = home;
     currentGame.awayPlayers = away;
+    _pushToFirestore();
     notifyListeners();
   }
 
-  /// --------------------------------------------------------------
-  /// Set the starting server and receiver for a doubles match
-  /// Typically called after the doubles picker dialog confirms
-  /// --------------------------------------------------------------
   void setDoublesStartingServer(Player server, Player receiver) {
+    if (isObserver) return;
     setServer(server, receiver);
   }
 
-  // --------------------------------------------------------------
-  // NAVIGATION
-  // --------------------------------------------------------------
-
-  void nextGame() {
-    int nextIndex = games.indexOf(currentGame) + 1;
-    if (nextIndex < games.length) _loadGame(nextIndex);
-  }
-
-  void previousGame() {
-    int prevIndex = games.indexOf(currentGame) - 1;
-    if (prevIndex >= 0) _loadGame(prevIndex);
-  }
-
-  // --------------------------------------------------------------
-  // RESET
-  // --------------------------------------------------------------
-
-  void reset() {
-    matchGamesWonHome = 0;
-    matchGamesWonAway = 0;
-    _initializeGames();
-    _loadGame(0);
-    notifyListeners();
+  Future<void> deleteMatch() async {
+    if (isObserver) return;
+    await _matchesCollection.doc(matchId).delete();
   }
 
   @override

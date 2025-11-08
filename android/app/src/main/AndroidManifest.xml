@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.table_tennis_scoreboard">
     <application
         android:label="TT Scoreboard"
         android:name="${applicationName}"

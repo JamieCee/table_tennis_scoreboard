@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "326116460647",
+    "project_id": "tt-scoreboard-aa76b",
+    "storage_bucket": "tt-scoreboard-aa76b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326116460647:android:f9691188b150a93a642cc2",
+        "android_client_info": {
+          "package_name": "com.example.table_tennis_scoreboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN4UdpUFe1a6vTX-fDzarD9ago6oKLxiY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

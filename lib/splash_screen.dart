@@ -2,7 +2,7 @@ import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:page_transition/page_transition.dart';
-import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
+import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -21,7 +21,7 @@ class SplashScreen extends StatelessWidget {
           ),
         ],
       ),
-      nextScreen: const TeamSetupScreen(),
+      nextScreen: const HomeScreen(),
       splashIconSize: 400,
       splashTransition: SplashTransition.fadeTransition,
       pageTransitionType: PageTransitionType.rightToLeft,
@@ -30,3 +30,5 @@ class SplashScreen extends StatelessWidget {
     );
   }
 }
+
+// 176261 496 76 62

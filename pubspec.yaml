@@ -40,6 +40,8 @@ dependencies:
   page_transition: ^2.2.1
   flutter_launcher_icons: ^0.14.4
   google_fonts: ^6.3.2
+  firebase_core: ^4.2.1
+  cloud_firestore: ^6.1.0
 
 dev_dependencies:
   flutter_test:
