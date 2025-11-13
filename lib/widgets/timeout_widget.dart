@@ -20,7 +20,7 @@ class TimeoutTimerWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.midnightBlue.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
+        border: Border.all(color: Colors.purple.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
@@ -29,7 +29,7 @@ class TimeoutTimerWidget extends StatelessWidget {
             style: GoogleFonts.oswald(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.orangeAccent,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 8),
@@ -37,19 +37,19 @@ class TimeoutTimerWidget extends StatelessWidget {
             '${timeLeft?.inMinutes.remainder(60).toString().padLeft(2, '0')}:${timeLeft?.inSeconds.remainder(60).toString().padLeft(2, '0')}',
             style: GoogleFonts.orbitron(
               fontSize: 28,
-              color: Colors.orangeAccent,
+              color: Colors.purpleAccent,
             ),
           ),
           const SizedBox(height: 12),
           StyledIconButton(
             onPressed: ctrl.endTimeoutEarly,
             icon: const Icon(Icons.timer_off_outlined, color: Colors.black),
-            color: Colors.orangeAccent,
+            color: Colors.purpleAccent,
             child: const Text(
               'End Timeout Early',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Colors.white,
               ),
             ),
           ),

@@ -13,8 +13,12 @@ class AppColors {
 
   static Color yellow = const Color.fromRGBO(237, 174, 73, 1);
 
+  static Color purple = const Color.fromRGBO(166, 32, 231, 1);
+  static Color purpleAccent = const Color.fromRGBO(197, 89, 195, 1);
+
   static const charcoal = Color(0xFF1C1F26);
   static const steelGray = Color(0xFF2A2F38);
   static const midnightBlue = Color(0xFF202A44);
   static const emeraldGreen = Color(0xFF3FFFA2);
+  static const primaryBackground = Color(0xff5e646e);
 }

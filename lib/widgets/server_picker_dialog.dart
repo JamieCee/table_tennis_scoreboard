@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_tennis_scoreboard/theme.dart';
 
 import '../models/player.dart';
 import '../widgets/themed_dialog.dart';
@@ -62,23 +63,22 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
         ],
       ),
       actions: [
-        ElevatedButton.icon(
-          icon: const Icon(Icons.check),
-          label: Text(
-            _selectedServer == null
-                ? 'Confirm'
-                : 'Start: ${_selectedServer!.name} serves',
-          ),
+        ElevatedButton(
           onPressed: _selectedServer == null
               ? null
               : () => widget.onConfirm(_selectedServer!),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.greenAccent.shade400,
-            foregroundColor: Colors.black,
+            backgroundColor: AppColors.purpleAccent,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+          ),
+          child: Text(
+            _selectedServer == null
+                ? 'Confirm'
+                : 'Start: ${_selectedServer!.name} serves',
           ),
         ),
       ],

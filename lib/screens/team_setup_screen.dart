@@ -7,6 +7,7 @@ import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
+import 'package:table_tennis_scoreboard/theme.dart';
 
 class TeamSetupScreen extends StatefulWidget {
   const TeamSetupScreen({super.key});
@@ -73,7 +74,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A2342),
+      backgroundColor: const Color(0xff5e646e).withValues(alpha: 0.5),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -86,7 +87,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                     Icon(
                       Icons.sports_tennis,
                       size: 80,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.purpleAccent.withValues(alpha: 0.9),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -95,13 +96,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                         color: Colors.white,
                         fontSize: 48,
                         letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      "Prepare your teams before battle!",
-                      style: GoogleFonts.robotoCondensed(
-                        color: Colors.white70,
-                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -113,7 +107,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                 color: Colors.blueAccent,
                 controller: _homeNameController,
                 players: _homePlayers,
-                icon: Icons.home,
               ),
               const SizedBox(height: 24),
               _teamCard(
@@ -121,22 +114,12 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                 color: Colors.redAccent,
                 controller: _awayNameController,
                 players: _awayPlayers,
-                icon: Icons.flight_takeoff,
               ),
               const SizedBox(height: 36),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.play_arrow, size: 28),
-                label: Text(
-                  "Start Match",
-                  style: GoogleFonts.oswald(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+              ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent.shade400,
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.purpleAccent,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 18,
@@ -145,9 +128,17 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 8,
-                  shadowColor: Colors.greenAccent.withValues(alpha: 0.6),
+                  shadowColor: Colors.purple.withValues(alpha: 0.6),
                 ),
                 onPressed: _startMatch,
+                child: Text(
+                  "Start Match",
+                  style: GoogleFonts.oswald(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
               ),
             ],
           ),
@@ -159,7 +150,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   Widget _teamCard({
     required String label,
     required Color color,
-    required IconData icon,
     required TextEditingController controller,
     required List<TextEditingController> players,
   }) {
@@ -167,7 +157,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 1), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.2),
@@ -182,8 +172,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 30),
-              const SizedBox(width: 8),
               Text(
                 label.toUpperCase(),
                 style: GoogleFonts.oswald(
@@ -199,7 +187,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
           TextField(
             controller: controller,
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Team Name', color),
+            decoration: _inputDecoration('Team Name', AppColors.white),
           ),
           const SizedBox(height: 12),
           for (int i = 0; i < 3; i++) ...[
@@ -208,7 +196,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: _inputDecoration(
                 'Player ${i + 1}',
-                color.withValues(alpha: 0.9),
+                AppColors.white.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: 8),

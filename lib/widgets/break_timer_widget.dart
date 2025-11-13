@@ -46,7 +46,7 @@ class BreakTimerWidget extends StatelessWidget {
         color: AppColors.midnightBlue.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.yellowAccent.withValues(alpha: 0.5),
+          color: Colors.purple.withValues(alpha: 0.5),
           width: 1.5,
         ),
         boxShadow: const [
@@ -72,7 +72,7 @@ class BreakTimerWidget extends StatelessWidget {
               '$minutes:$seconds',
               key: ValueKey('$minutes:$seconds'),
               style: GoogleFonts.orbitron(
-                color: Colors.yellowAccent,
+                color: Colors.purpleAccent,
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
               ),
@@ -82,12 +82,12 @@ class BreakTimerWidget extends StatelessWidget {
           StyledIconButton(
             onPressed: ctrl.endBreakEarly,
             icon: const Icon(Icons.timer_off_outlined, color: Colors.black),
-            color: Colors.yellowAccent,
+            color: Colors.purpleAccent,
             child: const Text(
               'End Break Early',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Colors.white,
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:table_tennis_scoreboard/screens/home_screen.dart';
+import 'package:table_tennis_scoreboard/theme.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -25,8 +26,8 @@ class SplashScreen extends StatelessWidget {
       splashIconSize: 400,
       splashTransition: SplashTransition.fadeTransition,
       pageTransitionType: PageTransitionType.rightToLeft,
-      duration: 5000,
-      backgroundColor: Colors.white,
+      duration: 1000,
+      backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
     );
   }
 }

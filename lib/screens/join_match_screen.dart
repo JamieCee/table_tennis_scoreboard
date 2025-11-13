@@ -8,6 +8,7 @@ import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
 
 import '../models/player.dart';
 import '../models/team.dart';
+import '../theme.dart';
 
 class JoinMatchScreen extends StatefulWidget {
   const JoinMatchScreen({super.key});
@@ -86,7 +87,7 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A2342),
+      backgroundColor: AppColors.charcoal,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

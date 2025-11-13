@@ -8,6 +8,7 @@ import '../models/player.dart';
 import '../screens/controller_screen.dart';
 import '../theme.dart';
 import '../widgets/doubles_server_picker.dart';
+import '../widgets/scoreboard_transition.dart';
 import '../widgets/themed_dialog.dart';
 
 class ScoreboardDisplayScreen extends StatefulWidget {
@@ -179,11 +180,11 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     final ctrl = context.watch<MatchController>();
 
     return Scaffold(
-      backgroundColor: AppColors.midnightBlue,
+      backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
       appBar: ctrl.isObserver
           ? null
           : AppBar(
-              backgroundColor: Colors.black87,
+              backgroundColor: AppColors.purpleAccent.withValues(alpha: 0.4),
               elevation: 4,
               title: Text(
                 'Match Scoreboard',
@@ -209,51 +210,84 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 ),
               ],
             ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: ListView(
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: ListView(
                 children: [
-                  _teamBlock(
-                    ctrl.home.name,
-                    ctrl.matchGamesWonHome,
-                    Colors.blueAccent,
-                    usedTimeout: ctrl.currentGame.homeTimeoutUsed,
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _teamBlock(
+                        ctrl.home.name,
+                        ctrl.matchGamesWonHome,
+                        Colors.blueAccent,
+                        usedTimeout: ctrl.currentGame.homeTimeoutUsed,
+                      ),
+                      _teamBlock(
+                        ctrl.away.name,
+                        ctrl.matchGamesWonAway,
+                        Colors.redAccent,
+                        usedTimeout: ctrl.currentGame.awayTimeoutUsed,
+                      ),
+                    ],
                   ),
-                  _teamBlock(
-                    ctrl.away.name,
-                    ctrl.matchGamesWonAway,
-                    Colors.redAccent,
-                    usedTimeout: ctrl.currentGame.awayTimeoutUsed,
+                  const SizedBox(height: 28),
+                  ctrl.isTimeoutActive
+                      ? _timeoutTimer(ctrl)
+                      : ctrl.isBreakActive
+                      ? _breakTimer(ctrl)
+                      : _gameInfo(ctrl),
+                  const SizedBox(height: 28),
+                  _mainScoreboard(ctrl),
+                  const SizedBox(height: 28),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _setSummary(
+                        ctrl.currentGame.setsWonHome,
+                        Colors.blueAccent,
+                      ),
+                      _setSummary(
+                        ctrl.currentGame.setsWonAway,
+                        Colors.redAccent,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 28),
+                  _matchOverviewFooter(ctrl),
+                  const SizedBox(height: 20),
                 ],
               ),
-              const SizedBox(height: 28),
-              ctrl.isTimeoutActive
-                  ? _timeoutTimer(ctrl)
-                  : ctrl.isBreakActive
-                  ? _breakTimer(ctrl)
-                  : _gameInfo(ctrl),
-              const SizedBox(height: 28),
-              _mainScoreboard(ctrl),
-              const SizedBox(height: 28),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _setSummary(ctrl.currentGame.setsWonHome, Colors.blueAccent),
-                  _setSummary(ctrl.currentGame.setsWonAway, Colors.redAccent),
-                ],
-              ),
-              const SizedBox(height: 28),
-              _matchOverviewFooter(ctrl),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
+          if (ctrl.isTransitioning && ctrl.isNextGameReady)
+            ScoreTransitionOverlay(
+              gameNumber: _ctrl.currentGame.order,
+              totalGames: _ctrl.games.length,
+              homeNames: _ctrl.home.name,
+              awayNames: _ctrl.away.name,
+              homeScore:
+                  (ctrl.lastGameResult?['homeScore'] as num?)?.toInt() ?? 0,
+              awayScore:
+                  (ctrl.lastGameResult?['awayScore'] as num?)?.toInt() ?? 0,
+              setScores:
+                  (ctrl.lastGameResult?['setScores'] as List<dynamic>?)
+                      ?.map((s) => Map<String, int>.from(s as Map))
+                      .toList() ??
+                  [],
+              nextHomeNames: _ctrl.nextGame?.homePlayers
+                  .map((p) => p.name)
+                  .join(' & '),
+              nextAwayNames: _ctrl.nextGame?.awayPlayers
+                  .map((p) => p.name)
+                  .join(' & '),
+              onContinue: () => _ctrl.startNextGame(),
+            ),
+        ],
       ),
     );
   }
@@ -368,10 +402,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 homePlayers.isNotEmpty &&
                 ctrl.currentServer?.name == homePlayers.first.name,
           ),
-          Text(
-            "—",
-            style: GoogleFonts.oswald(fontSize: 100, color: Colors.white54),
-          ),
+          const SizedBox(width: 50),
           _scoreColumn(
             score: ctrl.currentSet.away,
             color: Colors.redAccent,
@@ -497,7 +528,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             icon: Icons.grid_view_rounded,
             label: "Game/Set",
             value:
-                "G${ctrl.currentGame.order} / S${ctrl.currentGame.sets.length}",
+                "G${_ctrl.currentGame.order} / S${_ctrl.currentGame.sets.length}",
           ),
         ],
       ),

@@ -66,14 +66,14 @@ class _PointsButtonsState extends State<PointsButtons> {
             Expanded(
               child: ElevatedButton(
                 style: _scoreButtonStyle(
-                  Colors.deepPurpleAccent.shade700.withValues(alpha: 0.4),
+                  Colors.purpleAccent.withValues(alpha: 0.4),
                   isRemove: true,
                 ),
                 onPressed: disableButtons ? null : widget.ctrl.undoPointHome,
                 child: const Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Subtract -'),
+                    Text('Subtract'),
                     SizedBox(height: 2),
                     Text('Home Point', style: TextStyle(fontSize: 15)),
                   ],
@@ -84,14 +84,14 @@ class _PointsButtonsState extends State<PointsButtons> {
             Expanded(
               child: ElevatedButton(
                 style: _scoreButtonStyle(
-                  Colors.deepPurpleAccent.shade700.withValues(alpha: 0.4),
+                  Colors.purpleAccent.withValues(alpha: 0.4),
                   isRemove: true,
                 ),
                 onPressed: disableButtons ? null : widget.ctrl.undoPointAway,
                 child: const Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Subtract -'),
+                    Text('Subtract'),
                     SizedBox(height: 2),
                     Text('Away Point', style: TextStyle(fontSize: 15)),
                   ],
@@ -102,6 +102,21 @@ class _PointsButtonsState extends State<PointsButtons> {
         ),
 
         const SizedBox(height: 20),
+        Container(
+          height: 2,
+          width: 250,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.purpleAccent.withValues(alpha: 0.6),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -156,7 +171,10 @@ class _PointsButtonsState extends State<PointsButtons> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(isRemove ? 12 : 16),
         side: isRemove
-            ? BorderSide(color: Colors.white.withValues(alpha: 0.4), width: 1)
+            ? BorderSide(
+                color: AppColors.purple.withValues(alpha: 0.4),
+                width: 1,
+              )
             : BorderSide.none,
       ),
       textStyle: GoogleFonts.oswald(

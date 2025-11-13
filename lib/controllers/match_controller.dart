@@ -43,10 +43,15 @@ class MatchController extends ChangeNotifier {
   bool isTransitioning = false;
   bool isNextGameReady = false;
   Game? nextGamePreview;
+  Map<String, dynamic>? lastGameResult;
 
   VoidCallback? onDoublesPlayersNeeded;
   VoidCallback? onServerSelectionNeeded;
   VoidCallback? onMatchDeleted;
+  VoidCallback? onNextGameStarted;
+
+  void Function(Map<String, int> finalScore, List<Map<String, int>> setScores)?
+  onGameFinished;
 
   MatchController({
     required this.home,
@@ -67,22 +72,31 @@ class MatchController extends ChangeNotifier {
     final playerCombinations = [
       [home.players[0]],
       [away.players[1]],
+
       [home.players[2]],
       [away.players[0]],
+
       [home.players[1]],
       [away.players[2]],
+
       [home.players[2]],
       [away.players[1]],
+
       [],
       [],
+
       [home.players[0]],
       [away.players[2]],
+
       [home.players[1]],
       [away.players[0]],
+
       [home.players[2]],
       [away.players[2]],
+
       [home.players[1]],
       [away.players[1]],
+
       [home.players[0]],
       [away.players[0]],
     ];
@@ -92,7 +106,8 @@ class MatchController extends ChangeNotifier {
       games.add(
         Game(
           order: (i ~/ 2) + 1,
-          isDoubles: i == 8,
+          isDoubles: i == 8, // doubles placeholder
+          // isDoubles: false,
           homePlayers: List.from(playerCombinations[i]),
           awayPlayers: List.from(playerCombinations[i + 1]),
         ),
@@ -134,6 +149,11 @@ class MatchController extends ChangeNotifier {
     _matchesCollection.doc(matchId).set(toMap(), SetOptions(merge: true));
   }
 
+  Future<void> deleteMatch() async {
+    if (isObserver) return;
+    await _matchesCollection.doc(matchId).delete();
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'home': {
@@ -157,6 +177,9 @@ class MatchController extends ChangeNotifier {
         'team': timeoutCalledByHome ? 'home' : 'away',
         'remainingSeconds': remainingTimeoutTime?.inSeconds ?? 0,
       },
+      'isTransitioning': isTransitioning,
+      'isNextGameReady': isNextGameReady,
+      'lastGameResult': lastGameResult,
       'currentServer': currentServer?.name,
       'currentReceiver': currentReceiver?.name,
       'serveCount': serveCount,
@@ -167,6 +190,11 @@ class MatchController extends ChangeNotifier {
   void _updateFromMap(Map<String, dynamic> data) {
     matchGamesWonHome = data['matchGamesWonHome'] ?? matchGamesWonHome;
     matchGamesWonAway = data['matchGamesWonAway'] ?? matchGamesWonAway;
+    isTransitioning = data['isTransitioning'] ?? isTransitioning;
+    isNextGameReady = data['isNextGameReady'] ?? isNextGameReady;
+    lastGameResult = data['lastGameResult'] != null
+        ? Map<String, dynamic>.from(data['lastGameResult'])
+        : lastGameResult;
 
     final gamesData =
         (data['games'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -243,6 +271,7 @@ class MatchController extends ChangeNotifier {
 
   void _afterPoint() {
     serveCount++;
+
     _maybeRotateServer();
     _checkSetEnd();
     _pushToFirestore();
@@ -274,7 +303,10 @@ class MatchController extends ChangeNotifier {
   bool get isGameEditable =>
       !isCurrentGameCompleted && !isBreakActive && !isTimeoutActive;
 
-  bool get isMatchOver => matchGamesWonHome == 5 || matchGamesWonAway == 5;
+  bool get isMatchOver {
+    final completedGames = matchGamesWonHome + matchGamesWonAway;
+    return completedGames >= games.length;
+  }
 
   void setServer(Player? server, Player? receiver) {
     if (isObserver) return;
@@ -439,21 +471,50 @@ class MatchController extends ChangeNotifier {
     } else {
       matchGamesWonAway++;
     }
+    List<Map<String, int>> setScores = [];
+
+    setScores = currentGame.sets
+        .map((s) => {'home': s.home, 'away': s.away})
+        .toList();
+
+    lastGameResult = {
+      'homeScore': currentGame.setsWonHome,
+      'awayScore': currentGame.setsWonAway,
+      'setScores': setScores,
+    };
+
+    onGameFinished?.call({
+      'home': currentGame.setsWonHome,
+      'away': currentGame.setsWonAway,
+    }, setScores);
 
     if (!isMatchOver && currentGame.order < games.length) {
       nextGamePreview = games[currentGame.order];
       isTransitioning = true;
       isNextGameReady = true;
     }
+
+    _pushToFirestore();
     notifyListeners();
   }
 
+  Game? get nextGame {
+    final currentIndex = games.indexOf(currentGame);
+    if (currentIndex == -1 || currentIndex + 1 >= games.length) return null;
+    return games[currentIndex + 1];
+  }
+
   void startNextGame() {
-    if (nextGamePreview == null || isObserver) return;
+    if (nextGamePreview == null || isObserver) {
+      return;
+    }
 
     isTransitioning = false;
     isNextGameReady = false;
-    _loadGame(nextGamePreview!.order - 1);
+    lastGameResult = null;
+
+    _loadGame(nextGamePreview!.order - 1); // 1-based to 0-based
+
     nextGamePreview = null;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -465,7 +526,10 @@ class MatchController extends ChangeNotifier {
     });
 
     _pushToFirestore();
+
     notifyListeners();
+
+    onNextGameStarted?.call();
   }
 
   void setDoublesPlayers(List<Player> home, List<Player> away) {
@@ -479,11 +543,6 @@ class MatchController extends ChangeNotifier {
   void setDoublesStartingServer(Player server, Player receiver) {
     if (isObserver) return;
     setServer(server, receiver);
-  }
-
-  Future<void> deleteMatch() async {
-    if (isObserver) return;
-    await _matchesCollection.doc(matchId).delete();
   }
 
   @override

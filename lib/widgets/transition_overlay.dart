@@ -65,7 +65,7 @@ class _TransitionOverlayState extends State<TransitionOverlay>
               CurvedAnimation(parent: _slideCtrl, curve: Curves.easeInOutCubic),
             ),
         child: Container(
-          color: AppColors.midnightBlue,
+          color: AppColors.charcoal,
           alignment: Alignment.center,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -73,8 +73,9 @@ class _TransitionOverlayState extends State<TransitionOverlay>
               Text(
                 'Game ${widget.gameNumber} of ${widget.totalGames}',
                 style: GoogleFonts.orbitron(
-                  color: Colors.yellowAccent,
+                  color: Colors.purple,
                   fontSize: 28,
+                  decoration: TextDecoration.none,
                 ),
               ),
               const SizedBox(height: 20),
@@ -84,14 +85,15 @@ class _TransitionOverlayState extends State<TransitionOverlay>
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.none,
                 ),
               ),
               const SizedBox(height: 40),
               ElevatedButton.icon(
                 onPressed: _handleTap,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent.shade400,
-                  foregroundColor: Colors.black,
+                  backgroundColor: Colors.purpleAccent.withValues(alpha: 0.5),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
                     vertical: 16,

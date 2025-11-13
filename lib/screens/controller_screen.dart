@@ -101,8 +101,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
   AppBar _buildAppBar(BuildContext context, MatchController ctrl) {
     return AppBar(
-      title: const Text('Match Controller'),
-      backgroundColor: AppColors.midnightBlue,
+      title: Text(
+        'Match Controller',
+        style: GoogleFonts.oswald(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: AppColors.white,
+        ),
+      ),
+      backgroundColor: AppColors.purple.withValues(alpha: 0.4),
       centerTitle: true,
       elevation: 6,
       titleTextStyle: GoogleFonts.oswald(
@@ -153,7 +160,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     const SizedBox(height: 16),
                     PointsCounter(ctrl: _ctrl),
                     const SizedBox(height: 30),
-                    if (!_ctrl.isObserver) PointsButtons(ctrl: _ctrl),
+                    if (!_ctrl.isObserver && !_isMatchOver(ctrl))
+                      PointsButtons(ctrl: _ctrl),
                     const SizedBox(height: 24),
                     if (!_ctrl.isObserver && _isMatchOver(ctrl))
                       _buildCompleteMatchButton(ctrl),
@@ -184,11 +192,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
             if (!_ctrl.isObserver)
               StyledIconButton(
                 color: AppColors.turkeyRed,
-                onPressed: () => Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
-                  (_) => false,
-                ),
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
+                    (_) => false,
+                  );
+                  matchController.deleteMatch();
+                },
                 icon: const Icon(Icons.refresh, color: Colors.white),
                 child: const Text(
                   "Reset App",
@@ -242,15 +253,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
   Widget _buildCompleteMatchButton(MatchController ctrl) {
     return StyledIconButton(
-      color: AppColors.emeraldGreen,
-      icon: const Icon(Icons.emoji_events_outlined, color: Colors.black),
+      color: AppColors.purpleAccent,
+      icon: const Icon(Icons.emoji_events_outlined, color: Colors.white),
       onPressed: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => MatchScorecardScreen(ctrl: ctrl)),
       ),
       child: const Text(
         'Complete Match',
-        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
       ),
     );
   }
