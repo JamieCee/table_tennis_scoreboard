@@ -279,12 +279,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                       ?.map((s) => Map<String, int>.from(s as Map))
                       .toList() ??
                   [],
-              nextHomeNames: _ctrl.nextGame?.homePlayers
-                  .map((p) => p.name)
-                  .join(' & '),
-              nextAwayNames: _ctrl.nextGame?.awayPlayers
-                  .map((p) => p.name)
-                  .join(' & '),
+              nextHomeNames: ctrl.matchType == MatchType.singles
+                  ? ctrl.nextGame?.homePlayers.first.name
+                  : ctrl.nextGame?.homePlayers.map((p) => p.name).join(' & '),
+              nextAwayNames: ctrl.matchType == MatchType.singles
+                  ? ctrl.nextGame?.awayPlayers.first.name
+                  : ctrl.nextGame?.awayPlayers.map((p) => p.name).join(' & '),
               onContinue: () => _ctrl.startNextGame(),
             ),
         ],
@@ -345,6 +345,18 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   Widget _gameInfo(MatchController ctrl) {
+    if (ctrl.matchType == MatchType.singles) {
+      return Text(
+        "Best of ${ctrl.setsToWin == 3 ? 5 : 7} sets",
+        style: GoogleFonts.oswald(
+          fontSize: 22,
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
+
     final homePlayers = ctrl.currentGame.homePlayers;
     final awayPlayers = ctrl.currentGame.awayPlayers;
 
@@ -385,6 +397,20 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     final homePlayers = ctrl.currentGame.homePlayers;
     final awayPlayers = ctrl.currentGame.awayPlayers;
 
+    bool isHomeServing = false;
+    if (ctrl.currentServer != null && homePlayers.isNotEmpty) {
+      isHomeServing = homePlayers.any(
+        (p) => p.name == ctrl.currentServer!.name,
+      );
+    }
+
+    bool isAwayServing = false;
+    if (ctrl.currentServer != null && awayPlayers.isNotEmpty) {
+      isAwayServing = awayPlayers.any(
+        (p) => p.name == ctrl.currentServer!.name,
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white10.withAlpha(5),
@@ -398,17 +424,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           _scoreColumn(
             score: ctrl.currentSet.home,
             color: Colors.blueAccent,
-            isServing:
-                homePlayers.isNotEmpty &&
-                ctrl.currentServer?.name == homePlayers.first.name,
+            isServing: isHomeServing,
           ),
           const SizedBox(width: 50),
           _scoreColumn(
             score: ctrl.currentSet.away,
             color: Colors.redAccent,
-            isServing:
-                awayPlayers.isNotEmpty &&
-                ctrl.currentServer?.name == awayPlayers.first.name,
+            isServing: isAwayServing,
           ),
         ],
       ),

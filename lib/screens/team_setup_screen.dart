@@ -17,6 +17,9 @@ class TeamSetupScreen extends StatefulWidget {
 }
 
 class _TeamSetupScreenState extends State<TeamSetupScreen> {
+  MatchType _matchType = MatchType.team;
+  int _setsToWin = 3;
+
   final _homeNameController = TextEditingController(text: 'Home Team');
   final _awayNameController = TextEditingController(text: 'Away Team');
 
@@ -41,13 +44,25 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   }
 
   void _startMatch() async {
+    final homePlayers = _matchType == MatchType.team
+        ? _homePlayers.map((c) => Player(c.text)).toList()
+        : [_homePlayers.first].map((c) => Player(c.text)).toList();
+
+    final awayPlayers = _matchType == MatchType.team
+        ? _awayPlayers.map((c) => Player(c.text)).toList()
+        : [_awayPlayers.first].map((c) => Player(c.text)).toList();
+
     final home = Team(
-      name: _homeNameController.text,
-      players: _homePlayers.map((c) => Player(c.text)).toList(),
+      name: _matchType == MatchType.team
+          ? _homeNameController.text
+          : homePlayers.first.name,
+      players: homePlayers,
     );
     final away = Team(
-      name: _awayNameController.text,
-      players: _awayPlayers.map((c) => Player(c.text)).toList(),
+      name: _matchType == MatchType.team
+          ? _awayNameController.text
+          : awayPlayers.first.name,
+      players: awayPlayers,
     );
 
     final matchId = _generateMatchId();
@@ -55,6 +70,8 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       home: home,
       away: away,
       matchId: matchId,
+      matchType: _matchType,
+      setsToWin: _setsToWin,
     );
 
     // Create Firestore document
@@ -102,18 +119,26 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              _buildMatchTypeSelector(),
+              if (_matchType == MatchType.singles) ...[
+                const SizedBox(height: 16),
+                _buildSetsToWinSelector(),
+              ],
+              const SizedBox(height: 24),
               _teamCard(
-                label: "Home Team",
+                label: _matchType == MatchType.team ? "Home Team" : "Player 1",
                 color: Colors.blueAccent,
                 controller: _homeNameController,
                 players: _homePlayers,
+                playerCount: _matchType == MatchType.team ? 3 : 1,
               ),
               const SizedBox(height: 24),
               _teamCard(
-                label: "Away Team",
+                label: _matchType == MatchType.team ? "Away Team" : "Player 2",
                 color: Colors.redAccent,
                 controller: _awayNameController,
                 players: _awayPlayers,
+                playerCount: _matchType == MatchType.team ? 3 : 1,
               ),
               const SizedBox(height: 36),
               ElevatedButton(
@@ -147,11 +172,52 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     );
   }
 
+  Widget _buildMatchTypeSelector() {
+    return SegmentedButton<MatchType>(
+      segments: const [
+        ButtonSegment(value: MatchType.team, label: Text('Team')),
+        ButtonSegment(value: MatchType.singles, label: Text('Singles')),
+      ],
+      selected: {_matchType},
+      onSelectionChanged: (newSelection) {
+        setState(() {
+          _matchType = newSelection.first;
+        });
+      },
+      style: SegmentedButton.styleFrom(
+        backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
+        foregroundColor: Colors.white,
+        selectedForegroundColor: AppColors.purpleAccent,
+      ),
+    );
+  }
+
+  Widget _buildSetsToWinSelector() {
+    return SegmentedButton<int>(
+      segments: const [
+        ButtonSegment(value: 3, label: Text('Best of 5')),
+        ButtonSegment(value: 4, label: Text('Best of 7')),
+      ],
+      selected: {_setsToWin},
+      onSelectionChanged: (newSelection) {
+        setState(() {
+          _setsToWin = newSelection.first;
+        });
+      },
+      style: SegmentedButton.styleFrom(
+        backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
+        foregroundColor: Colors.white,
+        selectedForegroundColor: AppColors.purpleAccent,
+      ),
+    );
+  }
+
   Widget _teamCard({
     required String label,
     required Color color,
     required TextEditingController controller,
     required List<TextEditingController> players,
+    required int playerCount,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -183,19 +249,23 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Team Name', AppColors.white),
-          ),
+          if (_matchType == MatchType.team) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: _inputDecoration('Team Name', AppColors.white),
+            ),
+          ],
           const SizedBox(height: 12),
-          for (int i = 0; i < 3; i++) ...[
+          for (int i = 0; i < playerCount; i++) ...[
             TextField(
               controller: players[i],
               style: const TextStyle(color: Colors.white),
               decoration: _inputDecoration(
-                'Player ${i + 1}',
+                _matchType == MatchType.team
+                    ? 'Player ${i + 1}'
+                    : 'Player Name',
                 AppColors.white.withValues(alpha: 0.9),
               ),
             ),

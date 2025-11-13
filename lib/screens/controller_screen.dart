@@ -91,8 +91,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
           TransitionOverlay(
             gameNumber: ctrl.nextGamePreview!.order,
             totalGames: ctrl.games.length,
-            homeNames: _teamNames(ctrl.nextGamePreview!.homePlayers, ctrl.home),
-            awayNames: _teamNames(ctrl.nextGamePreview!.awayPlayers, ctrl.away),
+            homeNames: _teamNames(ctrl.nextGamePreview?.homePlayers, ctrl.home),
+            awayNames: _teamNames(ctrl.nextGamePreview?.awayPlayers, ctrl.away),
             onStartGame: ctrl.startNextGame,
           ),
       ],
@@ -266,10 +266,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
-  bool _isMatchOver(MatchController ctrl) =>
-      ctrl.games.last.setsWonHome == 3 || ctrl.games.last.setsWonAway == 3;
+  bool _isMatchOver(MatchController ctrl) => ctrl.isMatchOver;
 
-  String _teamNames(List<Player> specific, dynamic team) => specific.isNotEmpty
+  String _teamNames(List<Player>? specific, dynamic team) =>
+      specific != null && specific.isNotEmpty
       ? specific.map((p) => p.name).join(' & ')
       : team.players.map((p) => p.name).join(' & ');
 

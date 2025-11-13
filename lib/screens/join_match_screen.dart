@@ -50,6 +50,12 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
       final data = doc.data()!;
       final homeTeam = data['home'];
       final awayTeam = data['away'];
+      final matchTypeString = data['matchType'] as String?;
+      final setsToWin = data['setsToWin'] as int?;
+
+      final matchType = matchTypeString == 'MatchType.singles'
+          ? MatchType.singles
+          : MatchType.team;
 
       // Create controller in observer mode
       final controller = MatchController(
@@ -63,6 +69,8 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
         ),
         matchId: matchId,
         isObserver: true, // OBSERVER MODE
+        matchType: matchType,
+        setsToWin: setsToWin ?? 3, // Default to 3 if not present
       );
 
       // Push ControllerScreen and remove all previous routes

@@ -9,11 +9,15 @@ import '../models/set_score.dart';
 import '../models/team.dart';
 import '../shared/configuration.dart';
 
+enum MatchType { singles, team }
+
 class MatchController extends ChangeNotifier {
   final String matchId;
   final Team home;
   final Team away;
   final bool isObserver;
+  final MatchType matchType;
+  final int setsToWin;
 
   late final CollectionReference _matchesCollection;
   late List<Game> games;
@@ -58,6 +62,8 @@ class MatchController extends ChangeNotifier {
     required this.away,
     required this.matchId,
     this.isObserver = false,
+    this.matchType = MatchType.team,
+    this.setsToWin = 3,
   }) {
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
@@ -69,49 +75,51 @@ class MatchController extends ChangeNotifier {
   }
 
   void _initializeGames() {
-    final playerCombinations = [
-      [home.players[0]],
-      [away.players[1]],
-
-      [home.players[2]],
-      [away.players[0]],
-
-      [home.players[1]],
-      [away.players[2]],
-
-      [home.players[2]],
-      [away.players[1]],
-
-      [],
-      [],
-
-      [home.players[0]],
-      [away.players[2]],
-
-      [home.players[1]],
-      [away.players[0]],
-
-      [home.players[2]],
-      [away.players[2]],
-
-      [home.players[1]],
-      [away.players[1]],
-
-      [home.players[0]],
-      [away.players[0]],
-    ];
-
-    games = [];
-    for (int i = 0; i < playerCombinations.length; i += 2) {
-      games.add(
+    if (matchType == MatchType.singles) {
+      games = [
         Game(
-          order: (i ~/ 2) + 1,
-          isDoubles: i == 8, // doubles placeholder
-          // isDoubles: false,
-          homePlayers: List.from(playerCombinations[i]),
-          awayPlayers: List.from(playerCombinations[i + 1]),
+          order: 1,
+          isDoubles: false,
+          homePlayers: [home.players[0]],
+          awayPlayers: [away.players[0]],
         ),
-      );
+      ];
+    } else {
+      final playerCombinations = [
+        [home.players[0]],
+        [away.players[1]],
+        [home.players[2]],
+        [away.players[0]],
+        [home.players[1]],
+        [away.players[2]],
+        [home.players[2]],
+        [away.players[1]],
+        [],
+        [],
+        [home.players[0]],
+        [away.players[2]],
+        [home.players[1]],
+        [away.players[0]],
+        [home.players[2]],
+        [away.players[2]],
+        [home.players[1]],
+        [away.players[1]],
+        [home.players[0]],
+        [away.players[0]],
+      ];
+
+      games = [];
+      for (int i = 0; i < playerCombinations.length; i += 2) {
+        games.add(
+          Game(
+            order: (i ~/ 2) + 1,
+            isDoubles: i == 8, // doubles placeholder
+            // isDoubles: false,
+            homePlayers: List.from(playerCombinations[i]),
+            awayPlayers: List.from(playerCombinations[i + 1]),
+          ),
+        );
+      }
     }
   }
 
@@ -164,6 +172,8 @@ class MatchController extends ChangeNotifier {
         'name': away.name,
         'players': away.players.map((p) => p.name).toList(),
       },
+      'matchType': matchType.toString(),
+      'setsToWin': setsToWin,
       'currentGameIndex': games.indexOf(currentGame),
       'matchGamesWonHome': matchGamesWonHome,
       'matchGamesWonAway': matchGamesWonAway,
@@ -298,12 +308,16 @@ class MatchController extends ChangeNotifier {
   }
 
   bool get isCurrentGameCompleted =>
-      currentGame.setsWonHome == 3 || currentGame.setsWonAway == 3;
+      currentGame.setsWonHome == setsToWin ||
+      currentGame.setsWonAway == setsToWin;
 
   bool get isGameEditable =>
       !isCurrentGameCompleted && !isBreakActive && !isTimeoutActive;
 
   bool get isMatchOver {
+    if (matchType == MatchType.singles) {
+      return matchGamesWonHome > 0 || matchGamesWonAway > 0;
+    }
     final completedGames = matchGamesWonHome + matchGamesWonAway;
     return completedGames >= games.length;
   }
