@@ -1,3 +1,5 @@
 # List of features to add
 
-## Scoreboard screen. After the end of a game, show who won and also show a 'up next' display to show the next game
+## Version 2
+- Running set scores per game. (feature)
+- Maintaining state if app is closed and re-opened (bug)

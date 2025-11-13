@@ -101,35 +101,47 @@ class MatchScorecardScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           // Sets Row
                           Wrap(
-                            spacing: 12,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: game.sets.map((set) {
-                              return Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.midnightBlue.withValues(
-                                    alpha: 0.7,
+                              return SizedBox(
+                                width: 50,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      '${set.home}',
-                                      style: GoogleFonts.robotoMono(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.blueAccent,
-                                      ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.midnightBlue.withValues(
+                                      alpha: 0.7,
                                     ),
-                                    Text(
-                                      '${set.away}',
-                                      style: GoogleFonts.robotoMono(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.redAccent,
-                                      ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.midnightBlue,
+                                      width: 1.5,
                                     ),
-                                  ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${set.home}',
+                                        style: GoogleFonts.robotoMono(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.blueAccent,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${set.away}',
+                                        style: GoogleFonts.robotoMono(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.redAccent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }).toList(),

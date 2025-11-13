@@ -180,7 +180,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     final ctrl = context.watch<MatchController>();
 
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
+      backgroundColor: AppColors.charcoal,
       appBar: ctrl.isObserver
           ? null
           : AppBar(
@@ -244,19 +244,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   const SizedBox(height: 28),
                   _mainScoreboard(ctrl),
                   const SizedBox(height: 28),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _setSummary(
-                        ctrl.currentGame.setsWonHome,
-                        Colors.blueAccent,
-                      ),
-                      _setSummary(
-                        ctrl.currentGame.setsWonAway,
-                        Colors.redAccent,
-                      ),
-                    ],
-                  ),
+                  _setScores(ctrl),
                   const SizedBox(height: 28),
                   _matchOverviewFooter(ctrl),
                   const SizedBox(height: 20),
@@ -336,7 +324,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           "${remainingTime.inSeconds.remainder(60).toString().padLeft(2, '0')}",
           style: GoogleFonts.oswald(
             fontSize: 72,
-            color: Colors.orangeAccent,
+            color: Colors.purpleAccent,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -460,7 +448,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             if (usedTimeout)
               const Padding(
                 padding: EdgeInsets.only(left: 6),
-                child: Icon(Icons.timer, color: Colors.orangeAccent, size: 18),
+                child: Icon(Icons.timer, color: Colors.purpleAccent, size: 18),
               ),
           ],
         ),
@@ -510,22 +498,55 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _setSummary(int setsWon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: color.withAlpha(15),
-        border: Border.all(color: color.withAlpha(40)),
-      ),
-      child: Text(
-        "$setsWon Sets",
-        style: GoogleFonts.oswald(
-          fontSize: 28,
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+  Widget _setScores(MatchController ctrl) {
+    final completedSets = ctrl.currentGame.sets.where((s) {
+      final isFinished =
+          (s.home >= 11 || s.away >= 11) && (s.home - s.away).abs() >= 2;
+      return isFinished;
+    }).toList();
+
+    if (completedSets.isEmpty) {
+      return const SizedBox(height: 60); // Keep layout consistent
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: completedSets.map((set) {
+        return SizedBox(
+          width: 60,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.midnightBlue.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.midnightBlue, width: 1.5),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${set.home}',
+                  style: GoogleFonts.robotoMono(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${set.away}',
+                  style: GoogleFonts.robotoMono(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
