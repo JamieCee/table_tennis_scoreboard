@@ -18,7 +18,7 @@ class TeamSetupScreen extends StatefulWidget {
 
 class _TeamSetupScreenState extends State<TeamSetupScreen> {
   MatchType _matchType = MatchType.team;
-  int _setsToWin = 3;
+  int _setsToWin = 3; // Number of sets to win by
 
   final _homeNameController = TextEditingController(text: 'Home Team');
   final _awayNameController = TextEditingController(text: 'Away Team');
@@ -26,12 +26,13 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   final _homePlayers = List.generate(
     3,
     (i) => TextEditingController(text: 'H${i + 1}'),
-  );
+  ); // 3 players in a home team
   final _awayPlayers = List.generate(
     3,
     (i) => TextEditingController(text: 'A${i + 1}'),
-  );
+  ); // 3 players in the away team
 
+  // Generate a 6-character alphanumeric match ID as a join code
   String _generateMatchId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
@@ -44,20 +45,25 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   }
 
   void _startMatch() async {
+    // List the collection of home players or the singles player
     final homePlayers = _matchType == MatchType.team
         ? _homePlayers.map((c) => Player(c.text)).toList()
         : [_homePlayers.first].map((c) => Player(c.text)).toList();
 
+    // List the collection of away players or the singles player
     final awayPlayers = _matchType == MatchType.team
         ? _awayPlayers.map((c) => Player(c.text)).toList()
         : [_awayPlayers.first].map((c) => Player(c.text)).toList();
 
+    // If its a team game, show team name, else show the singles player
     final home = Team(
       name: _matchType == MatchType.team
           ? _homeNameController.text
           : homePlayers.first.name,
       players: homePlayers,
     );
+
+    // If its a team game, show team name, else show the singles player
     final away = Team(
       name: _matchType == MatchType.team
           ? _awayNameController.text
@@ -66,6 +72,8 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     );
 
     final matchId = _generateMatchId();
+
+    // Create new match controller
     final controller = MatchController(
       home: home,
       away: away,
@@ -195,6 +203,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   Widget _buildSetsToWinSelector() {
     return SegmentedButton<int>(
       segments: const [
+        ButtonSegment(value: 2, label: Text('Best of 3')),
         ButtonSegment(value: 3, label: Text('Best of 5')),
         ButtonSegment(value: 4, label: Text('Best of 7')),
       ],
