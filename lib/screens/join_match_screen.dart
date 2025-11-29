@@ -11,7 +11,9 @@ import '../models/team.dart';
 import '../theme.dart';
 
 class JoinMatchScreen extends StatefulWidget {
-  const JoinMatchScreen({super.key});
+  final bool isWebObserver;
+
+  const JoinMatchScreen({super.key, this.isWebObserver = false});
 
   @override
   State<JoinMatchScreen> createState() => _JoinMatchScreenState();
@@ -96,18 +98,23 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.charcoal,
+      // --- START: MODIFICATION FOR STEP 3 ---
+      appBar: AppBar(
+        // This line is the key. It shows the back button on mobile but hides it on web.
+        automaticallyImplyLeading: !widget.isWebObserver,
+        // Make the AppBar transparent to keep your original design
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // Optional: Give it a title for context
+        title: const Text("Join as Observer"),
+      ),
+      // --- END: MODIFICATION FOR STEP 3 ---
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                "Join Match",
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-              ),
               const SizedBox(height: 32),
               TextField(
                 controller: _codeController,
