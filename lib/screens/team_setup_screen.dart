@@ -20,6 +20,9 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   MatchType _matchType = MatchType.team;
   int _setsToWin = 3; // Number of sets to win by
 
+  int _handicapPlayerIndex = 0;
+  double _handicapPoints = 0;
+
   final _homeNameController = TextEditingController(text: 'Home Team');
   final _awayNameController = TextEditingController(text: 'Away Team');
 
@@ -80,6 +83,12 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       matchId: matchId,
       matchType: _matchType,
       setsToWin: _setsToWin,
+      handicapDetails: _matchType == MatchType.handicap
+          ? {
+              'playerIndex': _handicapPlayerIndex,
+              'points': _handicapPoints.toInt(),
+            }
+          : null,
     );
 
     // Create Firestore document
@@ -128,10 +137,13 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               ),
               const SizedBox(height: 32),
               _buildMatchTypeSelector(),
-              if (_matchType == MatchType.singles) ...[
-                const SizedBox(height: 16),
-                _buildSetsToWinSelector(),
-              ],
+              // if (_matchType == MatchType.singles) ...[
+              //   const SizedBox(height: 16),
+              //   _buildSetsToWinSelector(),
+              // ],
+              const SizedBox(height: 16),
+              if (_matchType == MatchType.singles) _buildSetsToWinSelector(),
+              if (_matchType == MatchType.handicap) _buildHandicapSelector(),
               const SizedBox(height: 24),
               _teamCard(
                 label: _matchType == MatchType.team ? "Home Team" : "Player 1",
@@ -180,16 +192,34 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     );
   }
 
+  // Match type selector (singles or team)
   Widget _buildMatchTypeSelector() {
     return SegmentedButton<MatchType>(
       segments: const [
         ButtonSegment(value: MatchType.team, label: Text('Team')),
         ButtonSegment(value: MatchType.singles, label: Text('Singles')),
+        ButtonSegment(value: MatchType.handicap, label: Text('Handicap')),
       ],
       selected: {_matchType},
       onSelectionChanged: (newSelection) {
         setState(() {
           _matchType = newSelection.first;
+
+          // --- Add/Modify this logic block ---
+          if (_matchType == MatchType.singles) {
+            _setsToWin = 2; // Default to 'Best of 3'
+          } else if (_matchType == MatchType.handicap) {
+            _setsToWin = 2; // Default handicap to 'Best of 3' as well
+          } else {
+            // This handles the 'Team' case
+            _setsToWin = 3; // Team games are best of 5 sets
+          }
+          // --- End of logic block ---
+
+          // This handles resetting handicap points if you switch away from it
+          if (_matchType != MatchType.handicap) {
+            _handicapPoints = 0;
+          }
         });
       },
       style: SegmentedButton.styleFrom(
@@ -280,6 +310,77 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
             ),
             const SizedBox(height: 8),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHandicapSelector() {
+    String homePlayerName = _homePlayers.first.text.isNotEmpty
+        ? _homePlayers.first.text
+        : 'Player 1';
+    String awayPlayerName = _awayPlayers.first.text.isNotEmpty
+        ? _awayPlayers.first.text
+        : 'Player 2';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBackground.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.purpleAccent, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Handicap Setup",
+            style: GoogleFonts.oswald(
+              color: Colors.purpleAccent,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<int>(
+            segments: [
+              ButtonSegment(value: 0, label: Text(homePlayerName)),
+              ButtonSegment(value: 1, label: Text(awayPlayerName)),
+            ],
+            selected: {_handicapPlayerIndex},
+            onSelectionChanged: (newSelection) {
+              setState(() {
+                _handicapPlayerIndex = newSelection.first;
+              });
+            },
+            style: SegmentedButton.styleFrom(
+              backgroundColor: AppColors.primaryBackground.withValues(
+                alpha: 0.5,
+              ),
+              foregroundColor: Colors.white,
+              selectedForegroundColor: AppColors.purpleAccent,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Starting Points Slider
+          Text(
+            "Starting Points: ${_handicapPoints.toInt()}",
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+          Slider(
+            value: _handicapPoints,
+            min: 0,
+            max: 20, // Cannot start at 21 or more
+            divisions: 20,
+            label: _handicapPoints.toInt().toString(),
+            activeColor: Colors.white,
+            inactiveColor: Colors.purpleAccent.withValues(alpha: 0.3),
+            onChanged: (newValue) {
+              setState(() {
+                _handicapPoints = newValue;
+              });
+            },
+          ),
         ],
       ),
     );

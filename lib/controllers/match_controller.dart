@@ -9,7 +9,7 @@ import '../models/set_score.dart';
 import '../models/team.dart';
 import '../shared/configuration.dart';
 
-enum MatchType { singles, team }
+enum MatchType { singles, team, handicap }
 
 class MatchController extends ChangeNotifier {
   final String matchId;
@@ -54,6 +54,10 @@ class MatchController extends ChangeNotifier {
   VoidCallback? onMatchDeleted;
   VoidCallback? onNextGameStarted;
 
+  final Map<String, int>? handicapDetails;
+  late final int _pointsToWin;
+  late final int _servesPerTurn;
+
   void Function(Map<String, int> finalScore, List<Map<String, int>> setScores)?
   onGameFinished;
 
@@ -64,7 +68,16 @@ class MatchController extends ChangeNotifier {
     this.isObserver = false,
     this.matchType = MatchType.team,
     this.setsToWin = 3,
+    this.handicapDetails,
   }) {
+    if (matchType == MatchType.handicap) {
+      _pointsToWin = 21;
+      _servesPerTurn = 5;
+    } else {
+      _pointsToWin = 11;
+      _servesPerTurn = 2;
+    }
+
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
     _loadGame(0);
@@ -75,15 +88,27 @@ class MatchController extends ChangeNotifier {
   }
 
   void _initializeGames() {
-    if (matchType == MatchType.singles) {
-      games = [
-        Game(
-          order: 1,
-          isDoubles: false,
-          homePlayers: [home.players[0]],
-          awayPlayers: [away.players[0]],
-        ),
-      ];
+    games = [];
+    Game game;
+
+    if (matchType == MatchType.handicap || matchType == MatchType.singles) {
+      // This block now handles both singles and handicap setup.
+      game = Game(
+        order: 1,
+        isDoubles: false,
+        homePlayers: [home.players[0]],
+        awayPlayers: [away.players[0]],
+      );
+
+      // The Game() constructor adds a default 0-0 set. Remove it.
+      game.sets.clear();
+
+      // Now, add the first set using our single, reliable method.
+      // We need to temporarily assign `currentGame` so `_createNewSet` works.
+      currentGame = game;
+      _createNewSet(); // This will add either a 0-0 set or a handicap set.
+
+      games.add(game);
     } else {
       final playerCombinations = [
         [home.players[0]],
@@ -108,7 +133,6 @@ class MatchController extends ChangeNotifier {
         [away.players[0]],
       ];
 
-      games = [];
       for (int i = 0; i < playerCombinations.length; i += 2) {
         games.add(
           Game(
@@ -280,7 +304,7 @@ class MatchController extends ChangeNotifier {
   }
 
   void _afterPoint() {
-    serveCount++;
+    // serveCount++;
 
     _maybeRotateServer();
     _checkSetEnd();
@@ -292,12 +316,22 @@ class MatchController extends ChangeNotifier {
     final home = currentSet.home;
     final away = currentSet.away;
 
-    if ((home >= 11 || away >= 11) && (home - away).abs() >= 2) {
+    // Check for deuce condition in a handicap game
+    if (matchType == MatchType.handicap && home >= 20 && home == away) {
+      deuce = true;
+    }
+
+    // Use _pointsToWin for dynamic win condition
+    if ((home >= _pointsToWin || away >= _pointsToWin) &&
+        (home - away).abs() >= 2) {
       if (home > away) {
         currentGame.setsWonHome++;
       } else {
         currentGame.setsWonAway++;
       }
+
+      // Deuce is over when a set is won
+      deuce = false;
 
       if (isCurrentGameCompleted) {
         _completeGame();
@@ -305,6 +339,19 @@ class MatchController extends ChangeNotifier {
         startBreak();
       }
     }
+    // if ((home >= 11 || away >= 11) && (home - away).abs() >= 2) {
+    //   if (home > away) {
+    //     currentGame.setsWonHome++;
+    //   } else {
+    //     currentGame.setsWonAway++;
+    //   }
+    //
+    //   if (isCurrentGameCompleted) {
+    //     _completeGame();
+    //   } else {
+    //     startBreak();
+    //   }
+    // }
   }
 
   bool get isCurrentGameCompleted =>
@@ -345,13 +392,67 @@ class MatchController extends ChangeNotifier {
     serveCount = 0;
   }
 
+  // helper method
+  void _createNewSet() {
+    final newSet = SetScore(); // Always start with a fresh SetScore object.
+
+    // Apply handicap *only* if it's a handicap match.
+    if (matchType == MatchType.handicap && handicapDetails != null) {
+      final playerIndex = handicapDetails!['playerIndex']!;
+      final points = handicapDetails!['points']!;
+
+      if (playerIndex == 0) {
+        // Home gets the head start
+        newSet.home = points;
+      } else {
+        // Away gets the head start
+        newSet.away = points;
+      }
+    }
+
+    // Add the new set (either 0-0 or with a handicap) to the current game.
+    currentGame.sets.add(newSet);
+    currentSet =
+        currentGame.sets.last; // Update the reference to the current set.
+  }
+
   void _maybeRotateServer() {
-    deuce = currentSet.home >= 10 && currentSet.away >= 10;
-    if (serveCount >= (deuce ? 1 : 2)) {
-      serveCount = 0;
-      currentGame.isDoubles ? _rotateDoublesServer() : _swapServerSingles();
+    final totalPoints = currentSet.home + currentSet.away;
+
+    // Deuce Logic (common for all match types, just the point threshold changes)
+    final deuceThreshold = (matchType == MatchType.handicap) ? 20 : 10;
+    deuce =
+        currentSet.home >= deuceThreshold && currentSet.away >= deuceThreshold;
+
+    if (deuce) {
+      // In deuce, it's one serve each for all game types.
+      _swapServerSingles();
+      return; // Server is swapped every point, so we are done.
+    }
+
+    // Handicap serving logic (before deuce)
+    if (matchType == MatchType.handicap) {
+      // Swap servers every 5 points (e.g., after the 5th, 10th, 15th point etc.)
+      if (totalPoints > 0 && totalPoints % 5 == 0) {
+        _swapServerSingles();
+      }
+      return; // Handicap logic is handled, exit the function.
+    }
+
+    // Standard serving logic (for Team and Singles)
+    if (totalPoints > 0 && totalPoints % 2 == 0) {
+      // This is a simpler way to handle serve changes.
+      // It swaps after 2, 4, 6, 8, etc. total points.
+      _swapServerSingles();
     }
   }
+  // void _maybeRotateServer() {
+  //   deuce = currentSet.home >= 10 && currentSet.away >= 10;
+  //   if (serveCount >= (deuce ? 1 : 2)) {
+  //     serveCount = 0;
+  //     currentGame.isDoubles ? _rotateDoublesServer() : _swapServerSingles();
+  //   }
+  // }
 
   void _swapServerSingles() {
     final temp = currentServer;
@@ -418,8 +519,9 @@ class MatchController extends ChangeNotifier {
     onBreakEnded?.call();
 
     if (!isObserver && !isCurrentGameCompleted) {
-      currentGame.sets.add(SetScore());
-      currentSet = currentGame.sets.last;
+      // --- Replace the old logic with this single line ---
+      _createNewSet(); // This correctly creates the next set.
+      // ---
       _setFirstServerOfSet();
     }
 
