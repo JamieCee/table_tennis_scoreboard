@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
@@ -93,6 +94,10 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
 
     // Create Firestore document
     await controller.createMatchInFirestore();
+
+    // Save active match ID
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('activeMatchId', matchId);
 
     Navigator.pushReplacement(
       context,

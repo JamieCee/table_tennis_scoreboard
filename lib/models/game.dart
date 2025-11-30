@@ -71,4 +71,20 @@ class Game {
           : null,
     );
   }
+
+  factory Game.fromJson(Map<String, dynamic> json) {
+    var game = Game(
+      order: json['order'],
+      isDoubles: json['isDoubles'],
+      homePlayers: (json['homePlayers'] as List).map((p) => Player(p)).toList(),
+      awayPlayers: (json['awayPlayers'] as List).map((p) => Player(p)).toList(),
+    );
+    // Re-populate the sets from the saved data
+    game.sets = (json['sets'] as List)
+        .map((setData) => SetScore.fromJson(setData))
+        .toList();
+    game.setsWonHome = json['setsWonHome'];
+    game.setsWonAway = json['setsWonAway'];
+    return game;
+  }
 }

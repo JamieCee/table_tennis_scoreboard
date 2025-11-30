@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/game.dart';
 import '../models/player.dart';
@@ -70,14 +71,7 @@ class MatchController extends ChangeNotifier {
     this.setsToWin = 3,
     this.handicapDetails,
   }) {
-    if (matchType == MatchType.handicap) {
-      pointsToWin = 21;
-      _servesPerTurn = 5;
-    } else {
-      pointsToWin = 11;
-      _servesPerTurn = 2;
-    }
-
+    _initializeRules();
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
     _loadGame(0);
@@ -85,6 +79,66 @@ class MatchController extends ChangeNotifier {
       createMatchInFirestore();
     }
     _listenToFirestore();
+  }
+
+  MatchController.resume({
+    required this.home,
+    required this.away,
+    required this.matchId,
+    required this.isObserver,
+    required this.matchType,
+    required this.setsToWin,
+    this.handicapDetails,
+    required Map<String, dynamic> resumeData, // Pass the Firestore data here
+  }) {
+    _initializeRules();
+
+    _matchesCollection = FirebaseFirestore.instance.collection('matches');
+
+    // 1. Rebuild the games list from the saved data
+    if (resumeData['games'] != null) {
+      games = (resumeData['games'] as List)
+          .map((gameData) => Game.fromJson(gameData))
+          .toList();
+    } else {
+      // Fallback if games data is missing
+      _initializeGames();
+    }
+
+    // 2. Load the correct game and set based on saved index
+    final savedGameIndex = resumeData['currentGameIndex'] as int? ?? 0;
+    _loadGame(savedGameIndex);
+
+    // 3. Now, restore the server and receiver from the saved data.
+    //    This overrides the 'null' values set by _loadGame.
+    final serverName = resumeData['currentServer'] as String?;
+    if (serverName != null) {
+      currentServer = Player(serverName);
+    }
+
+    final receiverName = resumeData['currentReceiver'] as String?;
+    if (receiverName != null) {
+      currentReceiver = Player(receiverName);
+    }
+
+    // Restore serve count
+    serveCount = resumeData['serveCount'] as int? ?? 0;
+
+    // Restore deuce status
+    deuce = resumeData['deuce'] as bool? ?? false;
+
+    // DO NOT call createMatchInFirestore(). The match already exists.
+    _listenToFirestore();
+  }
+
+  void _initializeRules() {
+    if (matchType == MatchType.handicap) {
+      pointsToWin = 21;
+      _servesPerTurn = 5;
+    } else {
+      pointsToWin = 11;
+      _servesPerTurn = 2;
+    }
   }
 
   void _initializeGames() {
@@ -610,8 +664,17 @@ class MatchController extends ChangeNotifier {
       isNextGameReady = true;
     }
 
+    if (!isObserver) {
+      _clearActiveMatchId();
+    }
+
     _pushToFirestore();
     notifyListeners();
+  }
+
+  Future<void> _clearActiveMatchId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('activeMatchId');
   }
 
   Game? get nextGame {

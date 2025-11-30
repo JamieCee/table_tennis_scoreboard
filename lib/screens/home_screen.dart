@@ -1,13 +1,142 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
 import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 
+import '../controllers/match_controller.dart';
+import '../models/team.dart';
 import '../theme.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _checkForActiveMatch();
+  }
+
+  Future<void> _checkForActiveMatch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final matchId = prefs.getString('activeMatchId');
+
+    if (matchId == null || !mounted) return;
+
+    // Check if match still exists in firestore
+    final matchDoc = await FirebaseFirestore.instance
+        .collection('matches')
+        .doc(matchId)
+        .get();
+    if (!matchDoc.exists || (matchDoc.data()?['isMatchOver'] ?? false)) {
+      await prefs.remove('activeMatchId');
+      return;
+    }
+
+    // If we're here, there is a match
+    showDialog(
+      context: context,
+      barrierDismissible: false, // An option must be chosen
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Resume Match?'),
+          content: const Text(
+            'You have an unfinished match. Would you like to continue where you left off?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () async {
+                await prefs.remove('activeMatchId');
+
+                // Delete match id from firestore
+                await FirebaseFirestore.instance
+                    .collection('matches')
+                    .doc(matchId)
+                    .delete();
+
+                Navigator.of(context).pop();
+              },
+              child: const Text('Discard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _resumeMatchAsController(matchId, matchDoc.data()!);
+              },
+              child: const Text('Resume'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _resumeMatchAsController(
+    String matchId,
+    Map<String, dynamic> matchData,
+  ) {
+    try {
+      // Take data from the document (database)
+      final homeTeamData = matchData['home'];
+      final awayTeamData = matchData['away'];
+      final matchTypeString = matchData['matchType'] as String?;
+      final setsToWin = matchData['setsToWin'] as int?;
+      final handicapDetails = matchData['handicapDetails'] as Map<String, int>?;
+
+      final homeTeam = Team.fromJson(homeTeamData);
+      final awayTeam = Team.fromJson(awayTeamData);
+
+      // Re-create team objects from the data
+      MatchType matchType;
+      if (matchTypeString == 'MatchType.singles') {
+        matchType = MatchType.singles;
+      } else if (matchTypeString == 'MatchType.handicap') {
+        matchType = MatchType.handicap;
+      } else {
+        matchType = MatchType.team;
+      }
+
+      // Create match controller
+      final controller = MatchController.resume(
+        home: homeTeam,
+        away: awayTeam,
+        matchId: matchId,
+        isObserver: false,
+        matchType: matchType,
+        setsToWin: setsToWin ?? 3,
+        handicapDetails: handicapDetails,
+        resumeData: matchData,
+      );
+
+      // Navigate to the scoreboard
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider.value(
+            value: controller,
+            child: const ControllerScreen(),
+          ),
+        ),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text('Error resuming match: $e'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
