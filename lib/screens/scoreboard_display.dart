@@ -501,7 +501,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   Widget _setScores(MatchController ctrl) {
     final completedSets = ctrl.currentGame.sets.where((s) {
       final isFinished =
-          (s.home >= 11 || s.away >= 11) && (s.home - s.away).abs() >= 2;
+          (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
+          (s.home - s.away).abs() >= 2;
       return isFinished;
     }).toList();
 

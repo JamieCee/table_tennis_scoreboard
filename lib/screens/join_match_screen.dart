@@ -55,9 +55,15 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
       final matchTypeString = data['matchType'] as String?;
       final setsToWin = data['setsToWin'] as int?;
 
-      final matchType = matchTypeString == 'MatchType.singles'
-          ? MatchType.singles
-          : MatchType.team;
+      MatchType matchType;
+      if (matchTypeString == 'MatchType.singles') {
+        matchType = MatchType.singles;
+      } else if (matchTypeString == 'MatchType.handicap') {
+        matchType = MatchType.handicap;
+      } else {
+        // Default to team if the string is anything else or null
+        matchType = MatchType.team;
+      }
 
       // Create controller in observer mode
       final controller = MatchController(

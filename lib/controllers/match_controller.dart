@@ -55,7 +55,7 @@ class MatchController extends ChangeNotifier {
   VoidCallback? onNextGameStarted;
 
   final Map<String, int>? handicapDetails;
-  late final int _pointsToWin;
+  late final int pointsToWin;
   late final int _servesPerTurn;
 
   void Function(Map<String, int> finalScore, List<Map<String, int>> setScores)?
@@ -71,10 +71,10 @@ class MatchController extends ChangeNotifier {
     this.handicapDetails,
   }) {
     if (matchType == MatchType.handicap) {
-      _pointsToWin = 21;
+      pointsToWin = 21;
       _servesPerTurn = 5;
     } else {
-      _pointsToWin = 11;
+      pointsToWin = 11;
       _servesPerTurn = 2;
     }
 
@@ -322,7 +322,7 @@ class MatchController extends ChangeNotifier {
     }
 
     // Use _pointsToWin for dynamic win condition
-    if ((home >= _pointsToWin || away >= _pointsToWin) &&
+    if ((home >= pointsToWin || away >= pointsToWin) &&
         (home - away).abs() >= 2) {
       if (home > away) {
         currentGame.setsWonHome++;
