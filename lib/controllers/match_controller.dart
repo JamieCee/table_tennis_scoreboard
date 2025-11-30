@@ -37,6 +37,8 @@ class MatchController extends ChangeNotifier {
   VoidCallback? onBreakStarted;
   VoidCallback? onBreakEnded;
 
+  bool _isFirstLoad = false;
+
   bool isTimeoutActive = false;
   bool timeoutCalledByHome = false;
   Duration? remainingTimeoutTime;
@@ -71,6 +73,7 @@ class MatchController extends ChangeNotifier {
     this.setsToWin = 3,
     this.handicapDetails,
   }) {
+    _isFirstLoad = false;
     _initializeRules();
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
@@ -91,6 +94,7 @@ class MatchController extends ChangeNotifier {
     this.handicapDetails,
     required Map<String, dynamic> resumeData, // Pass the Firestore data here
   }) {
+    _isFirstLoad = true;
     _initializeRules();
 
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
@@ -315,6 +319,12 @@ class MatchController extends ChangeNotifier {
       remainingTimeoutTime = Duration(
         seconds: timeoutData['remainingSeconds'] ?? 0,
       );
+    }
+
+    if (_isFirstLoad) {
+      _isFirstLoad = false;
+      notifyListeners();
+      return;
     }
 
     currentServer = data['currentServer'] != null
