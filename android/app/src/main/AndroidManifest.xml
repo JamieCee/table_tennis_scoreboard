@@ -1,10 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.table_tennis_scoreboard">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="TT Scoreboard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
-            android:name=".MainActivity"
+            android:name="com.jamiecollins.table_tennis_scoreboard.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
