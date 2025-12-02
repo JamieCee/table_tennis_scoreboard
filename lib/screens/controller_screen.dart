@@ -27,10 +27,10 @@ import '../widgets/transition_overlay.dart';
 /// --------------------------------------------------------------
 class ControllerScreen extends StatefulWidget {
   final bool showDialogOnLoad;
-  final MatchController? controller;
+  final MatchController controller;
   const ControllerScreen({
     super.key,
-    this.controller,
+    required this.controller,
     this.showDialogOnLoad = false,
   });
 
@@ -45,7 +45,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   void initState() {
     super.initState();
-    _ctrl = widget.controller ?? context.read<MatchController>();
+    _ctrl = widget.controller;
 
     // Register callbacks for when the controller needs user input
     if (!_ctrl.isObserver) {
@@ -130,7 +130,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
             MaterialPageRoute(
               builder: (_) => ChangeNotifierProvider.value(
                 value: ctrl,
-                child: const ScoreboardDisplayScreen(),
+                child: ScoreboardDisplayScreen(widget.controller),
               ),
             ),
           ),
@@ -197,7 +197,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
               StyledIconButton(
                 color: AppColors.turkeyRed,
                 onPressed: () {
-                  context.pushReplacement('/team-setup');
+                  context.pushReplacement('/controller/team-setup');
                   matchController.deleteMatch();
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white),

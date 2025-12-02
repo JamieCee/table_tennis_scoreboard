@@ -11,22 +11,23 @@ import '../widgets/scoreboard_transition.dart';
 import '../widgets/themed_dialog.dart';
 
 class ScoreboardDisplayScreen extends StatefulWidget {
-  const ScoreboardDisplayScreen({super.key});
+  final MatchController controller;
+  const ScoreboardDisplayScreen(this.controller, {super.key});
 
   @override
   State<ScoreboardDisplayScreen> createState() =>
-      _ScoreboardDisplayScreenState();
+      _ScoreboardDisplayScreenState(this.controller);
 }
 
 class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
-  late final MatchController _ctrl;
+  late final MatchController ctrl;
+  _ScoreboardDisplayScreenState(this.ctrl);
 
   @override
   void initState() {
     super.initState();
-    _ctrl = context.read<MatchController>();
 
-    _ctrl.onMatchDeleted = () {
+    ctrl.onMatchDeleted = () {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -35,18 +36,18 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       }
     };
 
-    if (!_ctrl.isObserver) {
-      _ctrl.onDoublesPlayersNeeded = () => _showDoublesPicker();
-      _ctrl.onServerSelectionNeeded = () => _showServerPicker();
+    if (!ctrl.isObserver) {
+      ctrl.onDoublesPlayersNeeded = () => _showDoublesPicker();
+      ctrl.onServerSelectionNeeded = () => _showServerPicker();
     }
   }
 
   @override
   void dispose() {
-    _ctrl.onMatchDeleted = null;
-    if (!_ctrl.isObserver) {
-      _ctrl.onDoublesPlayersNeeded = null;
-      _ctrl.onServerSelectionNeeded = null;
+    ctrl.onMatchDeleted = null;
+    if (!ctrl.isObserver) {
+      ctrl.onDoublesPlayersNeeded = null;
+      ctrl.onServerSelectionNeeded = null;
     }
     super.dispose();
   }
@@ -57,8 +58,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => ChangeNotifierProvider.value(
-        value: _ctrl,
-        child: const DoublesServerPicker(),
+        value: ctrl,
+        child: DoublesServerPicker(ctrl),
       ),
     );
   }
@@ -86,7 +87,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: _ctrl.currentGame.homePlayers
+                      children: ctrl.currentGame.homePlayers
                           .map(
                             (p) => Padding(
                               padding: const EdgeInsets.symmetric(
@@ -113,7 +114,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: _ctrl.currentGame.awayPlayers
+                      children: ctrl.currentGame.awayPlayers
                           .map(
                             (p) => Padding(
                               padding: const EdgeInsets.symmetric(
@@ -153,12 +154,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                     ? null
                     : () {
                         final receiver =
-                            _ctrl.currentGame.homePlayers.contains(
+                            ctrl.currentGame.homePlayers.contains(
                               selectedServer,
                             )
-                            ? _ctrl.currentGame.awayPlayers.first
-                            : _ctrl.currentGame.homePlayers.first;
-                        _ctrl.setServer(selectedServer, receiver);
+                            ? ctrl.currentGame.awayPlayers.first
+                            : ctrl.currentGame.homePlayers.first;
+                        ctrl.setServer(selectedServer, receiver);
                         Navigator.pop(context);
                       },
                 style: ElevatedButton.styleFrom(
@@ -237,10 +238,10 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           ),
           if (ctrl.isTransitioning && ctrl.isNextGameReady)
             ScoreTransitionOverlay(
-              gameNumber: _ctrl.currentGame.order,
-              totalGames: _ctrl.games.length,
-              homeNames: _ctrl.home.name,
-              awayNames: _ctrl.away.name,
+              gameNumber: ctrl.currentGame.order,
+              totalGames: ctrl.games.length,
+              homeNames: ctrl.home.name,
+              awayNames: ctrl.away.name,
               homeScore:
                   (ctrl.lastGameResult?['homeScore'] as num?)?.toInt() ?? 0,
               awayScore:
@@ -256,7 +257,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
               nextAwayNames: ctrl.matchType == MatchType.singles
                   ? ctrl.nextGame?.awayPlayers.first.name
                   : ctrl.nextGame?.awayPlayers.map((p) => p.name).join(' & '),
-              onContinue: () => _ctrl.startNextGame(),
+              onContinue: () => ctrl.startNextGame(),
             ),
         ],
       ),
@@ -555,7 +556,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             icon: Icons.grid_view_rounded,
             label: "Game/Set",
             value:
-                "G${_ctrl.currentGame.order} / S${_ctrl.currentGame.sets.length}",
+                "G${ctrl.currentGame.order} / S${ctrl.currentGame.sets.length}",
           ),
         ],
       ),

@@ -184,7 +184,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: () => context.pushReplacement('/team-setup'),
+                      onPressed: () =>
+                          context.pushReplacement('/controller/team-setup'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.purpleAccent,
                         padding: const EdgeInsets.symmetric(

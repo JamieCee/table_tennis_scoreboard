@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
-import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
 import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
 
 import '../models/player.dart';
@@ -82,16 +81,18 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
       );
 
       // Push ControllerScreen and remove all previous routes
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: controller,
-            child: const ScoreboardDisplayScreen(),
-          ),
-        ),
-        (_) => false,
-      );
+      context.pushReplacement('/controller', extra: controller);
+
+      // Navigator.pushAndRemoveUntil(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (_) => ChangeNotifierProvider.value(
+      //       value: controller,
+      //       child: const ScoreboardDisplayScreen(),
+      //     ),
+      //   ),
+      //   (_) => false,
+      // );
     } catch (e) {
       setState(() {
         _error = "Failed to join match.";

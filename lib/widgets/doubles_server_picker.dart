@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
 import '../models/team.dart';
 
 class DoublesServerPicker extends StatefulWidget {
-  const DoublesServerPicker({super.key});
+  final MatchController ctrl;
+  const DoublesServerPicker(this.ctrl, {super.key});
 
   @override
-  State<DoublesServerPicker> createState() => _DoublesServerPickerState();
+  State<DoublesServerPicker> createState() =>
+      _DoublesServerPickerState(this.ctrl);
 }
 
 class _DoublesServerPickerState extends State<DoublesServerPicker> {
+  late final MatchController ctrl;
+
+  _DoublesServerPickerState(this.ctrl);
   Player? selectedServer;
   Player? selectedReceiver;
 
@@ -21,7 +25,6 @@ class _DoublesServerPickerState extends State<DoublesServerPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = context.read<MatchController>();
     final homeTeam = ctrl.home;
     final awayTeam = ctrl.away;
 

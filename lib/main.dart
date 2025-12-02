@@ -44,34 +44,38 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: '/controller',
           builder: (BuildContext context, GoRouterState state) {
-            final MatchController? controller = state.extra as MatchController?;
+            final MatchController controller = state.extra as MatchController;
             return ControllerScreen(controller: controller);
           },
-        ),
-        GoRoute(
-          path: '/scoreboard',
-          builder: (BuildContext context, GoRouterState state) {
-            return const ScoreboardDisplayScreen();
-          },
-        ),
-        GoRoute(
-          path: '/match-card',
-          builder: (BuildContext context, GoRouterState state) {
-            final ctrl = state.extra as MatchController;
-            return MatchScorecardScreen(ctrl: ctrl);
-          },
-        ),
-        GoRoute(
-          path: '/team-setup',
-          builder: (BuildContext context, GoRouterState state) {
-            return const TeamSetupScreen();
-          },
-        ),
-        GoRoute(
-          path: '/join-match',
-          builder: (BuildContext context, GoRouterState state) {
-            return const JoinMatchScreen();
-          },
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/scoreboard',
+              builder: (BuildContext context, GoRouterState state) {
+                final MatchController controller =
+                    state.extra as MatchController;
+                return ScoreboardDisplayScreen(controller);
+              },
+            ),
+            GoRoute(
+              path: '/match-card',
+              builder: (BuildContext context, GoRouterState state) {
+                final ctrl = state.extra as MatchController;
+                return MatchScorecardScreen(ctrl: ctrl);
+              },
+            ),
+            GoRoute(
+              path: '/team-setup',
+              builder: (BuildContext context, GoRouterState state) {
+                return const TeamSetupScreen();
+              },
+            ),
+            GoRoute(
+              path: '/join-match',
+              builder: (BuildContext context, GoRouterState state) {
+                return const JoinMatchScreen();
+              },
+            ),
+          ],
         ),
       ],
     ),
@@ -92,5 +96,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-// 1762 615 569 876
