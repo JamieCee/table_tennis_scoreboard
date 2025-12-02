@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -10,9 +11,7 @@ import '../models/player.dart';
 import '../screens/controller/game_score.dart';
 import '../screens/controller/points_buttons.dart';
 import '../screens/controller/points_counter.dart';
-import '../screens/match_scorecard_screen.dart';
 import '../screens/scoreboard_display.dart';
-import '../screens/team_setup_screen.dart';
 import '../shared/styled_button.dart';
 import '../theme.dart';
 import '../widgets/break_timer_widget.dart';
@@ -28,7 +27,12 @@ import '../widgets/transition_overlay.dart';
 /// --------------------------------------------------------------
 class ControllerScreen extends StatefulWidget {
   final bool showDialogOnLoad;
-  const ControllerScreen({super.key, this.showDialogOnLoad = false});
+  final MatchController? controller;
+  const ControllerScreen({
+    super.key,
+    this.controller,
+    this.showDialogOnLoad = false,
+  });
 
   @override
   State<ControllerScreen> createState() => _ControllerScreenState();
@@ -41,7 +45,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   void initState() {
     super.initState();
-    _ctrl = context.read<MatchController>();
+    _ctrl = widget.controller ?? context.read<MatchController>();
 
     // Register callbacks for when the controller needs user input
     if (!_ctrl.isObserver) {
@@ -193,11 +197,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
               StyledIconButton(
                 color: AppColors.turkeyRed,
                 onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TeamSetupScreen()),
-                    (_) => false,
-                  );
+                  context.pushReplacement('/team-setup');
                   matchController.deleteMatch();
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white),
@@ -255,10 +255,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
     return StyledIconButton(
       color: AppColors.purpleAccent,
       icon: const Icon(Icons.emoji_events_outlined, color: Colors.white),
-      onPressed: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MatchScorecardScreen(ctrl: ctrl)),
-      ),
+      onPressed: () => context.go('/match-card', extra: ctrl),
       child: const Text(
         'Complete Match',
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),

@@ -5,7 +5,6 @@ import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
-import '../screens/controller_screen.dart';
 import '../theme.dart';
 import '../widgets/doubles_server_picker.dart';
 import '../widgets/scoreboard_transition.dart';
@@ -184,8 +183,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       appBar: ctrl.isObserver
           ? null
           : AppBar(
-              backgroundColor: AppColors.purpleAccent.withValues(alpha: 0.4),
-              elevation: 4,
+              backgroundColor: AppColors.purple.withValues(alpha: 0.4),
+              elevation: 6,
               title: Text(
                 'Match Scoreboard',
                 style: GoogleFonts.oswald(
@@ -193,22 +192,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   letterSpacing: 1.2,
                 ),
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings_remote, color: Colors.white),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChangeNotifierProvider.value(
-                          value: ctrl,
-                          child: const ControllerScreen(),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
             ),
       body: Stack(
         children: [

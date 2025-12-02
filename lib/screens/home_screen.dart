@@ -1,12 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
-import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/team.dart';
@@ -64,7 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     .doc(matchId)
                     .delete();
 
-                Navigator.of(context).pop();
+                context.go('/home');
+                // Navigator.of(context).pop();
               },
               child: const Text('Discard'),
             ),
@@ -118,16 +117,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       // Navigate to the scoreboard
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: controller,
-            child: const ControllerScreen(),
-          ),
-        ),
-        (route) => false,
-      );
+      // Navigator.pushAndRemoveUntil(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (_) => ChangeNotifierProvider.value(
+      //       value: controller,
+      //       child: const ControllerScreen(),
+      //     ),
+      //   ),
+      //   (route) => false,
+      // );
+      context.pushReplacement('controller', extra: controller);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -184,14 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TeamSetupScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => context.pushReplacement('/team-setup'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.purpleAccent,
                         padding: const EdgeInsets.symmetric(
@@ -217,14 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // --- Join Existing Match Button ---
                   OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const JoinMatchScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.go('/join-match'),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppColors.purple, width: 2),
                       shadowColor: AppColors.purpleAccent,

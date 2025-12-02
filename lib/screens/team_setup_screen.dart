@@ -1,13 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
-import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
 
 class TeamSetupScreen extends StatefulWidget {
@@ -99,15 +98,17 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('activeMatchId', matchId);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: controller,
-          child: const ControllerScreen(),
-        ),
-      ),
-    );
+    context.pushReplacement('/controller', extra: controller);
+
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (_) => ChangeNotifierProvider.value(
+    //       value: controller,
+    //       child: const ControllerScreen(),
+    //     ),
+    //   ),
+    // );
   }
 
   @override

@@ -30,8 +30,8 @@ class MatchScorecardScreen extends StatelessWidget {
       backgroundColor: AppColors.charcoal,
       appBar: AppBar(
         title: const Text('Match Scorecard'),
-        backgroundColor: AppColors.midnightBlue,
-        elevation: 4,
+        backgroundColor: AppColors.purple.withValues(alpha: 0.4),
+        elevation: 6,
         centerTitle: true,
         titleTextStyle: GoogleFonts.oswald(
           fontSize: 22,
