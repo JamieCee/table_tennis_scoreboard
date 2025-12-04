@@ -87,15 +87,59 @@ final GoRouter _router = GoRouter(
 
 // void main() => runApp(MyApp());
 
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp.router(
+//       title: 'Table Tennis Scoreboard',
+//       theme: ThemeData.dark(useMaterial3: true),
+//       routerConfig: _router,
+//     );
+//   }
+// }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Table Tennis Scoreboard',
-      theme: ThemeData.dark(useMaterial3: true),
-      routerConfig: _router,
+    return OrientationWrapper(
+      child: MaterialApp.router(
+        title: 'Table Tennis Scoreboard',
+        theme: ThemeData.dark(useMaterial3: true),
+        routerConfig: _router,
+      ),
+    );
+  }
+}
+
+/// Widget that locks orientation based on device width
+class OrientationWrapper extends StatelessWidget {
+  final Widget child;
+  const OrientationWrapper({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTablet = constraints.maxWidth > 600; // adjust threshold
+        if (isTablet) {
+          SystemChrome.setPreferredOrientations([
+            // DeviceOrientation.portraitUp,
+            // DeviceOrientation.portraitDown,
+            DeviceOrientation.landscapeLeft,
+            DeviceOrientation.landscapeRight,
+          ]);
+        } else {
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+        }
+        return child;
+      },
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -211,6 +212,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                         Colors.blueAccent,
                         usedTimeout: ctrl.currentGame.homeTimeoutUsed,
                       ),
+                      _gameInfo(ctrl),
                       _teamBlock(
                         ctrl.away.name,
                         ctrl.matchGamesWonAway,
@@ -224,12 +226,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                       ? _timeoutTimer(ctrl)
                       : ctrl.isBreakActive
                       ? _breakTimer(ctrl)
-                      : _gameInfo(ctrl),
-                  const SizedBox(height: 28),
+                      : const SizedBox(height: 0),
+                  const SizedBox(height: 15),
                   _mainScoreboard(ctrl),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 10),
                   _setScores(ctrl),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 10),
                   _matchOverviewFooter(ctrl),
                   const SizedBox(height: 20),
                 ],
@@ -383,6 +385,25 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       );
     }
 
+    bool? homeWonLastSet;
+    // Only show the winner indicator during a set break.
+    if (ctrl.isBreakActive) {
+      // Use lastWhereOrNull to safely find the last completed set.
+      final lastCompletedSet = ctrl.currentGame.sets.lastWhereOrNull((s) {
+        // A set is complete if one player reaches the target and is ahead by at least 2.
+        final isFinished =
+            (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
+            (s.home - s.away).abs() >= 2;
+        return isFinished;
+      });
+
+      // This check remains the same, as lastWhereOrNull returns null if not found.
+      if (lastCompletedSet != null) {
+        // Determine the winner from that set's score.
+        homeWonLastSet = lastCompletedSet.home > lastCompletedSet.away;
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white10.withAlpha(5),
@@ -397,12 +418,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             score: ctrl.currentSet.home,
             color: Colors.blueAccent,
             isServing: isHomeServing,
+            isWinner: homeWonLastSet == true,
           ),
-          const SizedBox(width: 50),
           _scoreColumn(
             score: ctrl.currentSet.away,
             color: Colors.redAccent,
             isServing: isAwayServing,
+            isWinner: homeWonLastSet == false,
           ),
         ],
       ),
@@ -453,7 +475,21 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     required int score,
     required Color color,
     required bool isServing,
+    bool isWinner = false,
   }) {
+    // The visual indicator for the winner
+    final winnerDecoration = BoxDecoration(
+      border: Border.all(color: color, width: 4),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: 0.4),
+          blurRadius: 15,
+          spreadRadius: 5,
+        ),
+      ],
+    );
+
     return Column(
       children: [
         AnimatedSwitcher(
@@ -469,15 +505,28 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 )
               : const SizedBox(height: 30, key: ValueKey('empty')),
         ),
-        Text(
-          "$score",
-          style: GoogleFonts.oswald(
-            fontSize: 120,
-            fontWeight: FontWeight.bold,
-            color: color,
-            height: 1,
+        Container(
+          // Apply decoration if this player is the winner
+          decoration: isWinner ? winnerDecoration : null,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Text(
+            score.toString(),
+            style: GoogleFonts.oswald(
+              fontSize: 100,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ),
+        // Text(
+        //   "$score",
+        //   style: GoogleFonts.oswald(
+        //     fontSize: 120,
+        //     fontWeight: FontWeight.bold,
+        //     color: color,
+        //     height: 1,
+        //   ),
+        // ),
       ],
     );
   }
@@ -497,15 +546,18 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: completedSets.map((set) {
-        return SizedBox(
-          width: 60,
+        // Wrap each score box in an Expanded widget.
+        return Expanded(
           child: Container(
+            // Reduce horizontal margin to give more room.
             padding: const EdgeInsets.symmetric(vertical: 8),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 2), // Was 4
             decoration: BoxDecoration(
-              color: AppColors.midnightBlue.withValues(alpha: 0.7),
+              color: Colors.white.withAlpha(
+                15,
+              ), // Using a standard color for example
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.midnightBlue, width: 1.5),
+              border: Border.all(color: Colors.white12, width: 1.5),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -534,6 +586,60 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       }).toList(),
     );
   }
+
+  //
+  // Widget _setScores(MatchController ctrl) {
+  //   final completedSets = ctrl.currentGame.sets.where((s) {
+  //     final isFinished =
+  //         (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
+  //         (s.home - s.away).abs() >= 2;
+  //     return isFinished;
+  //   }).toList();
+  //
+  //   if (completedSets.isEmpty) {
+  //     return const SizedBox(height: 60); // Keep layout consistent
+  //   }
+  //
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.center,
+  //     children: completedSets.map((set) {
+  //       return SizedBox(
+  //         width: 60,
+  //         child: Container(
+  //           padding: const EdgeInsets.symmetric(vertical: 8),
+  //           margin: const EdgeInsets.symmetric(horizontal: 4),
+  //           decoration: BoxDecoration(
+  //             color: AppColors.midnightBlue.withValues(alpha: 0.7),
+  //             borderRadius: BorderRadius.circular(12),
+  //             border: Border.all(color: AppColors.midnightBlue, width: 1.5),
+  //           ),
+  //           child: Column(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Text(
+  //                 '${set.home}',
+  //                 style: GoogleFonts.robotoMono(
+  //                   fontWeight: FontWeight.bold,
+  //                   fontSize: 18,
+  //                   color: Colors.blueAccent,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 4),
+  //               Text(
+  //                 '${set.away}',
+  //                 style: GoogleFonts.robotoMono(
+  //                   fontWeight: FontWeight.bold,
+  //                   fontSize: 18,
+  //                   color: Colors.redAccent,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     }).toList(),
+  //   );
+  // }
 
   Widget _matchOverviewFooter(MatchController ctrl) {
     return Container(
