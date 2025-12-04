@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/home_screen.dart';
@@ -18,7 +19,6 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Lock orientation to portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -28,54 +28,57 @@ void main() async {
 }
 
 final GoRouter _router = GoRouter(
-  routes: <RouteBase>[
+  initialLocation: '/',
+  routes: [
+    /// ---------------- SPLASH ----------------
+    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+
+    /// ---------------- HOME ----------------
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+
+    /// ---------------- TEAM SETUP ----------------
     GoRoute(
-      path: '/',
-      builder: (BuildContext context, GoRouterState state) {
-        return const SplashScreen();
+      path: '/team-setup',
+      builder: (context, state) => const TeamSetupScreen(),
+    ),
+
+    /// ---------------- JOIN MATCH ----------------
+    GoRoute(
+      path: '/join-match',
+      builder: (context, state) => const JoinMatchScreen(),
+    ),
+
+    /// ---------------- CONTROLLER ----------------
+    GoRoute(
+      path: '/controller',
+      builder: (context, state) {
+        final controller = state.extra as MatchController;
+
+        return ChangeNotifierProvider.value(
+          value: controller,
+          child: ControllerScreen(controller: controller),
+        );
       },
-      routes: <RouteBase>[
+      routes: [
         GoRoute(
-          path: '/home',
-          builder: (BuildContext context, GoRouterState state) {
-            return const HomeScreen();
+          path: 'scoreboard',
+          builder: (context, state) {
+            final controller = state.extra as MatchController;
+            return ChangeNotifierProvider.value(
+              value: controller,
+              child: ScoreboardDisplayScreen(controller),
+            );
           },
         ),
         GoRoute(
-          path: '/controller',
-          builder: (BuildContext context, GoRouterState state) {
-            final MatchController controller = state.extra as MatchController;
-            return ControllerScreen(controller: controller);
+          path: 'match-card',
+          builder: (context, state) {
+            final controller = state.extra as MatchController;
+            return ChangeNotifierProvider.value(
+              value: controller,
+              child: MatchScorecardScreen(ctrl: controller),
+            );
           },
-          routes: <RouteBase>[
-            GoRoute(
-              path: '/scoreboard',
-              builder: (BuildContext context, GoRouterState state) {
-                final MatchController controller =
-                    state.extra as MatchController;
-                return ScoreboardDisplayScreen(controller);
-              },
-            ),
-            GoRoute(
-              path: '/match-card',
-              builder: (BuildContext context, GoRouterState state) {
-                final ctrl = state.extra as MatchController;
-                return MatchScorecardScreen(ctrl: ctrl);
-              },
-            ),
-            GoRoute(
-              path: '/team-setup',
-              builder: (BuildContext context, GoRouterState state) {
-                return const TeamSetupScreen();
-              },
-            ),
-            GoRoute(
-              path: '/join-match',
-              builder: (BuildContext context, GoRouterState state) {
-                return const JoinMatchScreen();
-              },
-            ),
-          ],
         ),
       ],
     ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:table_tennis_scoreboard/theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../models/player.dart';
 import '../widgets/themed_dialog.dart';
@@ -36,16 +36,21 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Choose the player who will serve first:',
-            style: TextStyle(color: Colors.white70),
+            style: GoogleFonts.oswald(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
+            ),
+            // style: TextStyle(color: Colors.black, fontSize: 16),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _serverSelectSection(
-                  'Home Team',
+                  'Home',
                   widget.homePlayers,
                   Colors.blueAccent,
                 ),
@@ -53,7 +58,7 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
               const SizedBox(width: 16),
               Expanded(
                 child: _serverSelectSection(
-                  'Away Team',
+                  'Away',
                   widget.awayPlayers,
                   Colors.redAccent,
                 ),
@@ -68,7 +73,7 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
               ? null
               : () => widget.onConfirm(_selectedServer!),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.purpleAccent,
+            backgroundColor: Color.fromRGBO(64, 67, 78, 1),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
@@ -109,7 +114,7 @@ class _ServerPickerDialogState extends State<ServerPickerDialog> {
               label: Text(p.name),
               selected: isSelected,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.black : Colors.white,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
               selectedColor: color,

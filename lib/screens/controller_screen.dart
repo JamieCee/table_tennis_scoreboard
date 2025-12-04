@@ -197,7 +197,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
               StyledIconButton(
                 color: AppColors.turkeyRed,
                 onPressed: () {
-                  context.pushReplacement('/controller/team-setup');
+                  context.pushReplacement('/team-setup');
                   matchController.deleteMatch();
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white),
@@ -255,7 +255,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
     return StyledIconButton(
       color: AppColors.purpleAccent,
       icon: const Icon(Icons.emoji_events_outlined, color: Colors.white),
-      onPressed: () => context.go('/match-card', extra: ctrl),
+      onPressed: () => context.go('/controller/match-card', extra: ctrl),
       child: const Text(
         'Complete Match',
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),

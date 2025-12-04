@@ -24,13 +24,13 @@ class ThemedDialog extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: const LinearGradient(
-            colors: [Color(0xFF10253E), Color(0xFF07101F)],
+            colors: [Color(0xFF5E6C82), Color(0xFF294C60)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: Colors.black,
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),

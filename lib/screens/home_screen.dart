@@ -22,10 +22,19 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    _checkForActiveMatch();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _checkForActiveMatch();
+    });
   }
 
   Future<void> _checkForActiveMatch() async {
+    if (!mounted) return;
+
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent) return; // <<< KEY GUARD
+
     final prefs = await SharedPreferences.getInstance();
     final matchId = prefs.getString('activeMatchId');
 
@@ -127,7 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
       //   ),
       //   (route) => false,
       // );
-      context.pushReplacement('controller', extra: controller);
+      // context.pushReplacement('/controller', extra: controller);
+      context.go('/controller', extra: controller);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -144,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const JoinMatchScreen();
     } else {
       return Scaffold(
-        backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
+        backgroundColor: const Color(0xff3E4249),
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -184,8 +194,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: () =>
-                          context.pushReplacement('/controller/team-setup'),
+                      onPressed: () {
+                        context.go('/team-setup');
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.purpleAccent,
                         padding: const EdgeInsets.symmetric(

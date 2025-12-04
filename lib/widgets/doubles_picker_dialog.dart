@@ -62,7 +62,7 @@ class _DoublesPickerDialogState extends State<DoublesPickerDialog> {
                 }
               : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.purpleAccent,
+            backgroundColor: Color.fromRGBO(64, 67, 78, 1),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
 
@@ -114,6 +115,13 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
         elevation: 0,
         // Optional: Give it a title for context
         title: const Text("Join as Observer"),
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/home');
+          },
+        ),
       ),
       // --- END: MODIFICATION FOR STEP 3 ---
       body: SafeArea(
@@ -143,9 +151,18 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loading ? null : _joinMatch,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.purpleAccent,
+                ),
                 child: _loading
                     ? const CircularProgressIndicator()
-                    : const Text("Join Match"),
+                    : Text(
+                        "Join Match",
+                        style: GoogleFonts.oswald(
+                          color: Colors.white,
+                          fontSize: 22,
+                        ),
+                      ),
               ),
             ],
           ),

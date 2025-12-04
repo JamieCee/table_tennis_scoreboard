@@ -282,7 +282,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           "${remainingTime.inSeconds.remainder(60).toString().padLeft(2, '0')}",
           style: GoogleFonts.oswald(
             fontSize: 72,
-            color: Colors.greenAccent,
+            color: Colors.purpleAccent,
             fontWeight: FontWeight.w700,
           ),
         ),

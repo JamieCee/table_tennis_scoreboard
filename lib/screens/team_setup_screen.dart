@@ -98,7 +98,8 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('activeMatchId', matchId);
 
-    context.pushReplacement('/controller', extra: controller);
+    // context.pushReplacement('/controller', extra: controller);
+    context.go('/controller', extra: controller);
 
     // Navigator.pushReplacement(
     //   context,
@@ -114,7 +115,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff5e646e).withValues(alpha: 0.5),
+      backgroundColor: const Color(0xff3E4249),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -143,10 +144,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               ),
               const SizedBox(height: 32),
               _buildMatchTypeSelector(),
-              // if (_matchType == MatchType.singles) ...[
-              //   const SizedBox(height: 16),
-              //   _buildSetsToWinSelector(),
-              // ],
               const SizedBox(height: 16),
               if (_matchType == MatchType.singles) _buildSetsToWinSelector(),
               if (_matchType == MatchType.handicap) _buildHandicapSelector(),
@@ -231,7 +228,8 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       style: SegmentedButton.styleFrom(
         backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
         foregroundColor: Colors.white,
-        selectedForegroundColor: AppColors.purpleAccent,
+        selectedBackgroundColor: AppColors.purpleAccent.withValues(alpha: 0.4),
+        selectedForegroundColor: AppColors.white,
       ),
     );
   }
@@ -252,7 +250,8 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       style: SegmentedButton.styleFrom(
         backgroundColor: AppColors.primaryBackground.withValues(alpha: 0.5),
         foregroundColor: Colors.white,
-        selectedForegroundColor: AppColors.purpleAccent,
+        selectedBackgroundColor: AppColors.purpleAccent.withValues(alpha: 0.4),
+        selectedForegroundColor: AppColors.white,
       ),
     );
   }
@@ -268,7 +267,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 1), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 1), width: 2.5),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.2),
@@ -364,7 +363,10 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
                 alpha: 0.5,
               ),
               foregroundColor: Colors.white,
-              selectedForegroundColor: AppColors.purpleAccent,
+              selectedBackgroundColor: AppColors.purpleAccent.withValues(
+                alpha: 0.4,
+              ),
+              selectedForegroundColor: AppColors.white,
             ),
           ),
           const SizedBox(height: 16),
