@@ -1,21 +1,31 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
+import 'package:table_tennis_scoreboard/screens/login_screen.dart';
 import 'package:table_tennis_scoreboard/screens/match_scorecard_screen.dart';
 import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
 import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
+import 'package:table_tennis_scoreboard/services/api/chopper_client.dart';
 import 'package:table_tennis_scoreboard/splash_screen.dart';
 
 import 'firebase_options.dart';
 
-void main() async {
+Future main() async {
+  // To load the .env file contents into dotenv.
+  // NOTE: fileName defaults to .env and can be omitted in this case.
+  // Ensure that the filename corresponds to the path in step 1 and 2.
+  await dotenv.load(fileName: ".env");
+
   WidgetsFlutterBinding.ensureInitialized();
+
+  ApiClient.create();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -47,6 +57,9 @@ final GoRouter _router = GoRouter(
       path: '/join-match',
       builder: (context, state) => const JoinMatchScreen(),
     ),
+
+    /// ---------------- Login ----------------
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
 
     /// ---------------- CONTROLLER ----------------
     GoRoute(

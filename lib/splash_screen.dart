@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
     /// ✅ Router-controlled navigation AFTER splash duration
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (!mounted) return;
-      context.go('/home');
+      context.go('/login');
     });
   }
 

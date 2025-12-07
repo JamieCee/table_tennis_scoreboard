@@ -8,7 +8,7 @@ class ApiKeyHeaderInterceptor implements Interceptor {
     final request = applyHeader(
       chain.request,
       'x-api-key',
-      dotenv.env['X-API-KEY']!,
+      dotenv.env['X_API_KEY']!,
     );
     return chain.proceed(request);
   }
