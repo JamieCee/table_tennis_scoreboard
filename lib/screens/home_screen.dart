@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
 
 import '../controllers/match_controller.dart';
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _authController = AuthController();
+
   @override
   void initState() {
     // TODO: implement initState
@@ -125,18 +128,6 @@ class _HomeScreenState extends State<HomeScreen> {
         resumeData: matchData,
       );
 
-      // Navigate to the scoreboard
-      // Navigator.pushAndRemoveUntil(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => ChangeNotifierProvider.value(
-      //       value: controller,
-      //       child: const ControllerScreen(),
-      //     ),
-      //   ),
-      //   (route) => false,
-      // );
-      // context.pushReplacement('/controller', extra: controller);
       context.go('/controller', extra: controller);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,6 +146,20 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return Scaffold(
         backgroundColor: const Color(0xff3E4249),
+        appBar: AppBar(
+          title: const Text('TT Scoreboard'),
+          backgroundColor: AppColors.primaryBackground,
+          leading: Builder(
+            builder: (context) {
+              return IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(context).openDrawer();
+                },
+              );
+            },
+          ),
+        ),
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -246,6 +251,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+        drawer: Drawer(
+          child: ListView(
+            // Important: Remove any padding from the ListView.
+            padding: EdgeInsets.zero,
+            children: [
+              SizedBox(
+                height: 125,
+                child: DrawerHeader(
+                  decoration: BoxDecoration(color: AppColors.purpleAccent),
+                  padding: EdgeInsets.only(left: 20),
+                  child: Text('TT Scoreboard'),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () {
+                  _authController.logout();
+                  Navigator.pop(context);
+                  context.go('/');
+                },
+              ),
+            ],
           ),
         ),
       );

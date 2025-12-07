@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
@@ -19,6 +20,7 @@ class TeamSetupScreen extends StatefulWidget {
 class _TeamSetupScreenState extends State<TeamSetupScreen> {
   MatchType _matchType = MatchType.team;
   int _setsToWin = 3; // Number of sets to win by
+  final _authController = AuthController();
 
   int _handicapPlayerIndex = 0;
   double _handicapPoints = 0;
@@ -190,6 +192,39 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               ),
             ],
           ),
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          // Important: Remove any padding from the ListView.
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              height: 125,
+              child: DrawerHeader(
+                decoration: BoxDecoration(color: AppColors.purpleAccent),
+                padding: EdgeInsets.only(left: 20),
+                child: Text('TT Scoreboard'),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.house),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/home');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () {
+                _authController.logout();
+                Navigator.pop(context);
+                context.go('/');
+              },
+            ),
+          ],
         ),
       ),
     );

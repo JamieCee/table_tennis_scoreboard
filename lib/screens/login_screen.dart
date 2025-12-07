@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 
+import '../theme.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -56,6 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Icon(
+                  Icons.sports_tennis,
+                  color: AppColors.purpleAccent,
+                  size: 100,
+                ),
+                const SizedBox(height: 40),
+
                 const StyledHeading('Sign In'),
 
                 const SizedBox(height: 32),
