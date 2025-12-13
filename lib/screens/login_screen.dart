@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 
@@ -29,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
 
-    final success = await _authController.login(
+    final result = await _authController.login(
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -38,18 +39,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      context.pushReplacement('/home');
-    } else {
-      setState(() {
-        _error = 'Invalid Login Credentials';
-      });
+    switch (result) {
+      case LoginResult.success:
+        context.pushReplacement('/home');
+        break;
+      case LoginResult.notSubscribed:
+        context.pushReplacement('/subscribe');
+        break;
+      case LoginResult.invalidCredentials:
+        setState(() {
+          _error = 'Invalid Login Credentials';
+        });
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xff3E4249),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -64,12 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   size: 100,
                 ),
                 const SizedBox(height: 40),
-
                 const StyledHeading('Sign In'),
-
                 const SizedBox(height: 32),
-
-                // Email Input
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -82,8 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Password Input
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
@@ -96,8 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Error
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -106,21 +106,76 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-
-                // Action
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 60,
                   child: ElevatedButton(
                     onPressed: _loading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purpleAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                     child: _loading
                         ? const CircularProgressIndicator()
-                        : const Text('Login'),
+                        : Text(
+                            "Login",
+                            style: GoogleFonts.oswald(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          // Important: Remove any padding from the ListView.
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              height: 125,
+              child: DrawerHeader(
+                decoration: BoxDecoration(color: AppColors.purpleAccent),
+                padding: EdgeInsets.only(left: 20),
+                child: Text(
+                  'TT Scoreboard',
+                  style: GoogleFonts.oswald(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.house),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/home');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () {
+                _authController.logout();
+                Navigator.pop(context);
+                context.go('/');
+              },
+            ),
+          ],
         ),
       ),
     );

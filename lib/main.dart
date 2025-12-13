@@ -11,6 +11,7 @@ import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
 import 'package:table_tennis_scoreboard/screens/login_screen.dart';
 import 'package:table_tennis_scoreboard/screens/match_scorecard_screen.dart';
 import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
+import 'package:table_tennis_scoreboard/screens/subscription_screen.dart';
 import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 import 'package:table_tennis_scoreboard/services/api/chopper_client.dart';
 import 'package:table_tennis_scoreboard/splash_screen.dart';
@@ -45,6 +46,12 @@ final GoRouter _router = GoRouter(
 
     /// ---------------- HOME ----------------
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+
+    /// ---------------- HOME ----------------
+    GoRoute(
+      path: '/subscribe',
+      builder: (context, state) => const SubscriptionScreen(),
+    ),
 
     /// ---------------- TEAM SETUP ----------------
     GoRoute(

@@ -102,22 +102,25 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
 
     // context.pushReplacement('/controller', extra: controller);
     context.go('/controller', extra: controller);
-
-    // Navigator.pushReplacement(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (_) => ChangeNotifierProvider.value(
-    //       value: controller,
-    //       child: const ControllerScreen(),
-    //     ),
-    //   ),
-    // );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xff3E4249),
+      // appBar: AppBar(
+      //   backgroundColor: AppColors.primaryBackground,
+      //   leading: Builder(
+      //     builder: (context) {
+      //       return IconButton(
+      //         icon: const Icon(Icons.menu),
+      //         onPressed: () {
+      //           Scaffold.of(context).openDrawer();
+      //         },
+      //       );
+      //     },
+      //   ),
+      // ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

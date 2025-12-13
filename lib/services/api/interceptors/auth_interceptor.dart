@@ -1,4 +1,5 @@
 import 'package:chopper/chopper.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:table_tennis_scoreboard/models/token_response.dart';
 import 'package:table_tennis_scoreboard/services/api/auth_service.dart';
 import 'package:table_tennis_scoreboard/services/api/chopper_client.dart';
@@ -68,11 +69,17 @@ class AuthInterceptor implements Interceptor {
 
     final token = TokenResponse.fromJson(response.body as Map<String, dynamic>);
 
-    await storage.savetokens(
+    // Decode the access token
+    Map<String, dynamic> decodedToken = JwtDecoder.decode(token.accessToken);
+    final user = decodedToken['user'];
+    final isSubscribed = user is Map && user['tt_account_subscribed'] == true;
+
+    await storage.saveTokens(
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
       tokenType: token.tokenType,
       expiresIn: token.expiresIn,
+      isSubscribed: isSubscribed,
     );
 
     return true;

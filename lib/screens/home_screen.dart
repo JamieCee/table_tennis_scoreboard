@@ -147,7 +147,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return Scaffold(
         backgroundColor: const Color(0xff3E4249),
         appBar: AppBar(
-          title: const Text('TT Scoreboard'),
+          title: Text(
+            'TT Scoreboard',
+            style: GoogleFonts.oswald(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           backgroundColor: AppColors.primaryBackground,
           leading: Builder(
             builder: (context) {
