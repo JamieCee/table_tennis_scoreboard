@@ -321,7 +321,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   Widget _gameInfo(MatchController ctrl) {
     if (ctrl.matchType == MatchType.singles) {
       return Text(
-        "Best of ${ctrl.setsToWin == 3 ? 5 : 7} sets",
+        "Best of ${(ctrl.setsToWin * 2) - 1} sets",
         style: GoogleFonts.oswald(
           fontSize: 22,
           color: Colors.white,

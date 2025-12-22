@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
+import 'package:table_tennis_scoreboard/services/secure_storage.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 
 import '../theme.dart';
@@ -18,9 +19,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authController = AuthController();
+  final _secureStorage = SecureStorage();
 
+  bool _isAuthenticated = false;
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final token = await _secureStorage.getAccessToken();
+    if (mounted) {
+      setState(() {
+        _isAuthenticated = token != null;
+      });
+    }
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -147,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 125,
               child: DrawerHeader(
                 decoration: BoxDecoration(color: AppColors.purpleAccent),
-                padding: EdgeInsets.only(left: 20),
+                padding: const EdgeInsets.only(left: 20),
                 child: Text(
                   'TT Scoreboard',
                   style: GoogleFonts.oswald(
@@ -158,23 +176,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            ListTile(
-              leading: Icon(Icons.house),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/home');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                _authController.logout();
-                Navigator.pop(context);
-                context.go('/');
-              },
-            ),
+            if (_isAuthenticated) ...[
+              ListTile(
+                leading: const Icon(Icons.house),
+                title: const Text('Home'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/home');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  await _authController.logout();
+                  _checkAuthStatus();
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  context.go('/');
+                },
+              ),
+            ],
           ],
         ),
       ),
