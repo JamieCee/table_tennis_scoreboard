@@ -518,15 +518,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             ),
           ),
         ),
-        // Text(
-        //   "$score",
-        //   style: GoogleFonts.oswald(
-        //     fontSize: 120,
-        //     fontWeight: FontWeight.bold,
-        //     color: color,
-        //     height: 1,
-        //   ),
-        // ),
       ],
     );
   }
@@ -586,60 +577,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       }).toList(),
     );
   }
-
-  //
-  // Widget _setScores(MatchController ctrl) {
-  //   final completedSets = ctrl.currentGame.sets.where((s) {
-  //     final isFinished =
-  //         (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
-  //         (s.home - s.away).abs() >= 2;
-  //     return isFinished;
-  //   }).toList();
-  //
-  //   if (completedSets.isEmpty) {
-  //     return const SizedBox(height: 60); // Keep layout consistent
-  //   }
-  //
-  //   return Row(
-  //     mainAxisAlignment: MainAxisAlignment.center,
-  //     children: completedSets.map((set) {
-  //       return SizedBox(
-  //         width: 60,
-  //         child: Container(
-  //           padding: const EdgeInsets.symmetric(vertical: 8),
-  //           margin: const EdgeInsets.symmetric(horizontal: 4),
-  //           decoration: BoxDecoration(
-  //             color: AppColors.midnightBlue.withValues(alpha: 0.7),
-  //             borderRadius: BorderRadius.circular(12),
-  //             border: Border.all(color: AppColors.midnightBlue, width: 1.5),
-  //           ),
-  //           child: Column(
-  //             mainAxisAlignment: MainAxisAlignment.center,
-  //             children: [
-  //               Text(
-  //                 '${set.home}',
-  //                 style: GoogleFonts.robotoMono(
-  //                   fontWeight: FontWeight.bold,
-  //                   fontSize: 18,
-  //                   color: Colors.blueAccent,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 4),
-  //               Text(
-  //                 '${set.away}',
-  //                 style: GoogleFonts.robotoMono(
-  //                   fontWeight: FontWeight.bold,
-  //                   fontSize: 18,
-  //                   color: Colors.redAccent,
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       );
-  //     }).toList(),
-  //   );
-  // }
 
   Widget _matchOverviewFooter(MatchController ctrl) {
     return Container(

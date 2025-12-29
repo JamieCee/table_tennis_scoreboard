@@ -9,6 +9,7 @@ import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
+import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
 class TeamSetupScreen extends StatefulWidget {
   const TeamSetupScreen({super.key});
@@ -184,42 +185,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: ListView(
-          // Important: Remove any padding from the ListView.
-          padding: EdgeInsets.zero,
-          children: [
-            SizedBox(
-              height: 125,
-              child: DrawerHeader(
-                decoration: BoxDecoration(color: AppColors.purpleAccent),
-                padding: EdgeInsets.only(left: 20),
-                child: Text('TT Scoreboard'),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.house),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/home');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                Navigator.pop(context);
-
-                _authController.logout();
-
-                if (!mounted) return;
-                context.go('/');
-              },
-            ),
-          ],
-        ),
-      ),
+      drawer: const AppDrawer(),
     );
   }
 

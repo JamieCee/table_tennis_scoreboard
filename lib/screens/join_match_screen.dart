@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
+import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
 import '../models/player.dart';
 import '../models/team.dart';
@@ -83,17 +84,6 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
 
       // Push ControllerScreen and remove all previous routes
       context.pushReplacement('/controller', extra: controller);
-
-      // Navigator.pushAndRemoveUntil(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => ChangeNotifierProvider.value(
-      //       value: controller,
-      //       child: const ScoreboardDisplayScreen(),
-      //     ),
-      //   ),
-      //   (_) => false,
-      // );
     } catch (e) {
       setState(() {
         _error = "Failed to join match.";
@@ -106,7 +96,6 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.charcoal,
-      // --- START: MODIFICATION FOR STEP 3 ---
       appBar: AppBar(
         // This line is the key. It shows the back button on mobile but hides it on web.
         automaticallyImplyLeading: !widget.isWebObserver,
@@ -115,15 +104,7 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
         elevation: 0,
         // Optional: Give it a title for context
         title: const Text("Join as Observer"),
-
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            context.go('/home');
-          },
-        ),
       ),
-      // --- END: MODIFICATION FOR STEP 3 ---
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -168,6 +149,7 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
           ),
         ),
       ),
+      drawer: const AppDrawer(),
     );
   }
 }

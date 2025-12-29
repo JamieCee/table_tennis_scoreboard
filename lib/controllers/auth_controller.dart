@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/models/token_response.dart';
 import 'package:table_tennis_scoreboard/services/api/auth_service.dart';
 import 'package:table_tennis_scoreboard/services/api/chopper_client.dart';
 import 'package:table_tennis_scoreboard/services/secure_storage.dart';
+
+import '../services/auth_manager.dart';
 
 enum LoginResult { success, invalidCredentials, notSubscribed }
 
@@ -10,7 +14,11 @@ class AuthController {
   final _service = ApiClient.client.getService<AuthService>();
   final _storage = SecureStorage();
 
-  Future<LoginResult> login(String username, String password) async {
+  Future<LoginResult> login(
+    BuildContext context,
+    String username,
+    String password,
+  ) async {
     final response = await _service.authentication({
       'grant_type': 'password',
       'username': username,
@@ -36,6 +44,10 @@ class AuthController {
       isSubscribed: isSubscribed,
     );
 
+    // CHANGE 2: After successfully saving the token, notify the AuthManager.
+    // 'listen: false' is crucial here because we are in a method, not a widget's build method.
+    Provider.of<AuthManager>(context, listen: false).login();
+
     // If the user is not subscribed, return notSubscribed
     if (!isSubscribed) {
       return LoginResult.notSubscribed;
@@ -44,7 +56,7 @@ class AuthController {
     return LoginResult.success;
   }
 
-  Future<void> logout() async {
-    await _storage.clear();
+  Future<void> logout(BuildContext context) async {
+    Provider.of<AuthManager>(context, listen: false).logout();
   }
 }

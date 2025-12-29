@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
+import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/team.dart';
@@ -229,64 +230,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // --- Join Existing Match Button ---
-                  OutlinedButton(
-                    onPressed: () => context.go('/join-match'),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.purple, width: 2),
-                      shadowColor: AppColors.purpleAccent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 36,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      "Join Existing Match",
-                      style: GoogleFonts.oswald(
-                        color: AppColors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
         ),
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              SizedBox(
-                height: 125,
-                child: DrawerHeader(
-                  decoration: BoxDecoration(color: AppColors.purpleAccent),
-                  padding: EdgeInsets.only(left: 20),
-                  child: Text('TT Scoreboard'),
-                ),
-              ),
-              ListTile(
-                leading: Icon(Icons.logout),
-                title: const Text('Logout'),
-                onTap: () {
-                  Navigator.pop(context);
-
-                  _authController.logout();
-
-                  if (!mounted) return;
-                  context.go('/');
-                },
-              ),
-            ],
-          ),
-        ),
+        drawer: const AppDrawer(),
       );
     }
   }
