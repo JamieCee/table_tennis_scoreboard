@@ -108,19 +108,6 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xff3E4249),
-      // appBar: AppBar(
-      //   backgroundColor: AppColors.primaryBackground,
-      //   leading: Builder(
-      //     builder: (context) {
-      //       return IconButton(
-      //         icon: const Icon(Icons.menu),
-      //         onPressed: () {
-      //           Scaffold.of(context).openDrawer();
-      //         },
-      //       );
-      //     },
-      //   ),
-      // ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -222,8 +209,11 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
               leading: Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () {
-                _authController.logout();
                 Navigator.pop(context);
+
+                _authController.logout();
+
+                if (!mounted) return;
                 context.go('/');
               },
             ),

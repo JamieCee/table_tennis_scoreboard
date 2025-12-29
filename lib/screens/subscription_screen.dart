@@ -89,8 +89,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () {
-                _authController.logout();
                 Navigator.pop(context);
+
+                _authController.logout();
+
+                if (!mounted) return;
                 context.go('/');
               },
             ),

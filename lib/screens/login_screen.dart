@@ -32,17 +32,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkAuthStatus() async {
+    // Since this is in initState, we can be sure the widget is mounted.
+    // The 'mounted' check is more critical for async gaps after `await`.
     final token = await _secureStorage.getAccessToken();
-    if (mounted) {
-      setState(() {
-        _isAuthenticated = token != null;
-      });
 
-      if (token != null) {
-        context.go('/home');
-      } else {
-        context.go('/login');
-      }
+    if (!mounted) return; // Good practice to keep this check
+
+    setState(() {
+      _isAuthenticated = token != null;
+    });
+
+    // Only navigate if the user IS authenticated.
+    // If they are not, they are already on the correct screen (LoginScreen),
+    // so we don't need to do anything.
+    if (_isAuthenticated) {
+      context.go('/home');
     }
   }
 

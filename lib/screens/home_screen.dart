@@ -262,7 +262,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         drawer: Drawer(
           child: ListView(
-            // Important: Remove any padding from the ListView.
             padding: EdgeInsets.zero,
             children: [
               SizedBox(
@@ -277,8 +276,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 leading: Icon(Icons.logout),
                 title: const Text('Logout'),
                 onTap: () {
-                  _authController.logout();
                   Navigator.pop(context);
+
+                  _authController.logout();
+
+                  if (!mounted) return;
                   context.go('/');
                 },
               ),
