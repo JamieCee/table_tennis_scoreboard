@@ -524,34 +524,6 @@ class MatchController extends ChangeNotifier {
     currentReceiver = temp;
   }
 
-  void _rotateDoublesServer() {
-    if (currentGame.homePlayers.length < 2 ||
-        currentGame.awayPlayers.length < 2)
-      return;
-
-    final h1 = currentGame.homePlayers[0];
-    final h2 = currentGame.homePlayers[1];
-    final a1 = currentGame.awayPlayers[0];
-    final a2 = currentGame.awayPlayers[1];
-
-    final sequence = [
-      [h1, a1],
-      [a1, h2],
-      [h2, a2],
-      [a2, h1],
-    ];
-
-    int index = sequence.indexWhere(
-      (pair) => pair[0] == currentServer && pair[1] == currentReceiver,
-    );
-
-    if (index != -1) {
-      int nextIndex = (index + 1) % sequence.length;
-      currentServer = sequence[nextIndex][0];
-      currentReceiver = sequence[nextIndex][1];
-    }
-  }
-
   void startBreak() {
     if (isObserver) return;
 

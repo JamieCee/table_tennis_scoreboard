@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
@@ -21,7 +20,6 @@ class TeamSetupScreen extends StatefulWidget {
 class _TeamSetupScreenState extends State<TeamSetupScreen> {
   MatchType _matchType = MatchType.team;
   int _setsToWin = 3; // Number of sets to win by
-  final _authController = AuthController();
 
   int _handicapPlayerIndex = 0;
   double _handicapPoints = 0;

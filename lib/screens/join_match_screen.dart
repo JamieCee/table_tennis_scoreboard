@@ -83,7 +83,7 @@ class _JoinMatchScreenState extends State<JoinMatchScreen> {
       );
 
       // Push ControllerScreen and remove all previous routes
-      context.pushReplacement('/controller', extra: controller);
+      context.pushReplacement('/controller/scoreboard', extra: controller);
     } catch (e) {
       setState(() {
         _error = "Failed to join match.";

@@ -33,18 +33,27 @@ class AppRouter {
       final bool loggedIn = authManager.isAuthenticated;
       final String location = state.matchedLocation;
 
+      // Can spectate game
+      final bool isSpectatorRoute =
+          location == '/controller/scoreboard' ||
+          location == '/controller/match-card';
+
       // Define which routes are protected and require authentication.
       final isAuthRoute =
           location.startsWith('/home') ||
           location.startsWith('/controller') ||
           location.startsWith('/team-setup') ||
-          location.startsWith('/subscribe');
+          location.startsWith('/subscribe') && !isSpectatorRoute;
 
       // Define routes that a logged-in user should NOT be able to access.
       final isPublicOnlyRoute =
           location == '/login' || location == '/'; // Splash/Login
 
       // --- RULES ---
+
+      if (isSpectatorRoute) {
+        return null;
+      }
 
       // 1. Web spectator logic:
       if (kIsWeb) {

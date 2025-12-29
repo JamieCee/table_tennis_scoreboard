@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
-import 'package:table_tennis_scoreboard/services/secure_storage.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
@@ -20,9 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authController = AuthController();
-  final _secureStorage = SecureStorage();
 
-  bool _isAuthenticated = false;
   bool _loading = false;
   String? _error;
 

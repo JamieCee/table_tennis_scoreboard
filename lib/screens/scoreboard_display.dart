@@ -1,8 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/player.dart';
@@ -30,10 +30,14 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
     ctrl.onMatchDeleted = () {
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (Route<dynamic> route) => false,
-        );
+        // Determine the correct destination based on the user's role.
+        if (ctrl.isObserver) {
+          // Observers (spectators) should be sent back to the join match screen.
+          context.go('/join-match');
+        } else {
+          // The authenticated user (controller) should be sent to their home screen.
+          context.go('/home');
+        }
       }
     };
 

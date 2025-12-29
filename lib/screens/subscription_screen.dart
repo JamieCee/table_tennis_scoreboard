@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:table_tennis_scoreboard/services/secure_storage.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
-import '../controllers/auth_controller.dart';
 import '../theme.dart';
 
 class SubscriptionScreen extends StatefulWidget {
@@ -14,9 +12,6 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  final _authController = AuthController();
-  final _secureStorage = SecureStorage();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
