@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:animated_splash_screen/animated_splash_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
@@ -32,7 +33,12 @@ class _SplashScreenState extends State<SplashScreen> {
       if (token != null) {
         context.go('/home');
       } else {
-        context.go('/login');
+        print(kIsWeb);
+        if (kIsWeb) {
+          context.go('/join-match');
+        } else {
+          context.go('/login');
+        }
       }
     });
   }

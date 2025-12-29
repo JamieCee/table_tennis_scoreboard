@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -85,18 +86,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 return const SizedBox.shrink();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                Navigator.pop(context);
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () {
+                  Navigator.pop(context);
 
-                _authController.logout();
+                  _authController.logout();
 
-                if (!mounted) return;
-                context.go('/');
-              },
-            ),
+                  if (!mounted) return;
+                  context.go('/');
+                },
+              ),
           ],
         ),
       ),
