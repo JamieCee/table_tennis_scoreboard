@@ -37,6 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isAuthenticated = token != null;
       });
+
+      if (token != null) {
+        context.go('/home');
+      } else {
+        context.go('/login');
+      }
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:table_tennis_scoreboard/services/secure_storage.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,14 +16,24 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final _secureStorage = SecureStorage();
+
   @override
   void initState() {
     super.initState();
+    _navigate();
+  }
 
-    /// ✅ Router-controlled navigation AFTER splash duration
-    Future.delayed(const Duration(milliseconds: 1000), () {
+  void _navigate() {
+    Future.delayed(const Duration(milliseconds: 1200), () async {
+      final token = await _secureStorage.getAccessToken();
       if (!mounted) return;
-      context.go('/login');
+
+      if (token != null) {
+        context.go('/home');
+      } else {
+        context.go('/login');
+      }
     });
   }
 
