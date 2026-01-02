@@ -30,8 +30,16 @@ class AppRouter {
 
     // --- ROUTE GUARD (REDIRECT) LOGIC ---
     redirect: (BuildContext context, GoRouterState state) {
+      final authManager = Provider.of<AuthManager>(context, listen: false);
       final bool loggedIn = authManager.isAuthenticated;
       final String location = state.matchedLocation;
+      final bool isSubscribed = authManager.isSubscribed;
+
+      final isSpectateRoute =
+          location == '/controller/scoreboard' ||
+          location == '/controller/match-card';
+      final isPublicOnlyRoute = location == '/login' || location == '/';
+      final isGoingToSubscribe = location == '/subscribe';
 
       // Can spectate game
       final bool isSpectatorRoute =
@@ -40,16 +48,18 @@ class AppRouter {
 
       // Define which routes are protected and require authentication.
       final isAuthRoute =
-          location.startsWith('/home') ||
-          location.startsWith('/controller') ||
-          location.startsWith('/team-setup') ||
-          location.startsWith('/subscribe') && !isSpectatorRoute;
-
-      // Define routes that a logged-in user should NOT be able to access.
-      final isPublicOnlyRoute =
-          location == '/login' || location == '/'; // Splash/Login
+          (location.startsWith('/home') ||
+              location.startsWith('/controller') ||
+              location.startsWith('/team-setup')) &&
+          !isSpectatorRoute;
 
       // --- RULES ---
+
+      if (loggedIn && !isSubscribed && !isGoingToSubscribe) {
+        // If the user is logged in, NOT subscribed, and NOT already going to the subscribe page,
+        // force them to the subscribe page.
+        return '/subscribe';
+      }
 
       if (isSpectatorRoute) {
         return null;
@@ -71,8 +81,13 @@ class AppRouter {
       }
 
       // 3. Authenticated user trying to access a public-only route (like login).
-      if (loggedIn && isPublicOnlyRoute) {
-        return '/home'; // Redirect to the home screen.
+      if (loggedIn && isSubscribed && isPublicOnlyRoute) {
+        return '/home';
+      }
+
+      // Rule #6: An authenticated but unsubscribed user lands on the subscribe page. Do not redirect them.
+      if (loggedIn && !isSubscribed && isGoingToSubscribe) {
+        return null;
       }
 
       // 4. No redirection needed, proceed to the intended route.

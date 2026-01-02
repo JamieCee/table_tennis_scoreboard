@@ -1,155 +1,126 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
-import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
-import '../models/player.dart';
-import '../models/team.dart';
+import '../bloc/join_match/join_match_bloc.dart';
 import '../theme.dart';
 
-class JoinMatchScreen extends StatefulWidget {
+class JoinMatchScreen extends StatelessWidget {
   final bool isWebObserver;
-
   const JoinMatchScreen({super.key, this.isWebObserver = false});
 
   @override
-  State<JoinMatchScreen> createState() => _JoinMatchScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => JoinMatchBloc(),
+      child: Scaffold(
+        backgroundColor: AppColors.charcoal,
+        appBar: AppBar(
+          automaticallyImplyLeading: !isWebObserver,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text("Join as Observer"),
+        ),
+        // The actual UI is now in a separate widget below.
+        body: const _JoinMatchForm(),
+        drawer: const AppDrawer(),
+      ),
+    );
+  }
 }
 
-class _JoinMatchScreenState extends State<JoinMatchScreen> {
+class _JoinMatchForm extends StatefulWidget {
+  const _JoinMatchForm();
+
+  @override
+  State<_JoinMatchForm> createState() => __JoinMatchFormState();
+}
+
+class __JoinMatchFormState extends State<_JoinMatchForm> {
   final _codeController = TextEditingController();
-  bool _loading = false;
-  String? _error;
 
-  Future<void> _joinMatch() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
 
-    final matchId = _codeController.text.trim();
-    if (matchId.isEmpty) {
-      setState(() {
-        _error = "Please enter a game code.";
-        _loading = false;
-      });
-      return;
-    }
-
-    try {
-      final doc = await MatchFirestoreService(matchId).streamMatch().first;
-      if (!doc.exists) {
-        setState(() {
-          _error = "Match not found.";
-          _loading = false;
-        });
-        return;
-      }
-
-      final data = doc.data()!;
-      final homeTeam = data['home'];
-      final awayTeam = data['away'];
-      final matchTypeString = data['matchType'] as String?;
-      final setsToWin = data['setsToWin'] as int?;
-
-      MatchType matchType;
-      if (matchTypeString == 'MatchType.singles') {
-        matchType = MatchType.singles;
-      } else if (matchTypeString == 'MatchType.handicap') {
-        matchType = MatchType.handicap;
-      } else {
-        // Default to team if the string is anything else or null
-        matchType = MatchType.team;
-      }
-
-      // Create controller in observer mode
-      final controller = MatchController(
-        home: Team(
-          name: homeTeam['name'],
-          players: (homeTeam['players'] as List).map((p) => Player(p)).toList(),
-        ),
-        away: Team(
-          name: awayTeam['name'],
-          players: (awayTeam['players'] as List).map((p) => Player(p)).toList(),
-        ),
-        matchId: matchId,
-        isObserver: true, // OBSERVER MODE
-        matchType: matchType,
-        setsToWin: setsToWin ?? 3, // Default to 3 if not present
-      );
-
-      // Push ControllerScreen and remove all previous routes
-      context.pushReplacement('/controller/scoreboard', extra: controller);
-    } catch (e) {
-      setState(() {
-        _error = "Failed to join match.";
-        _loading = false;
-      });
-    }
+  void _dispatchJoinEvent() {
+    // This context is from _JoinMatchForm, which is UNDER the BlocProvider, so this works.
+    context.read<JoinMatchBloc>().add(
+      JoinMatchRequested(matchId: _codeController.text.trim()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.charcoal,
-      appBar: AppBar(
-        // This line is the key. It shows the back button on mobile but hides it on web.
-        automaticallyImplyLeading: !widget.isWebObserver,
-        // Make the AppBar transparent to keep your original design
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        // Optional: Give it a title for context
-        title: const Text("Join as Observer"),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 32),
-              TextField(
-                controller: _codeController,
-                decoration: InputDecoration(
-                  labelText: "Enter game code",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.white.withAlpha(13),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.blueAccent.shade200),
+    // This build method's context is a descendant of the BlocProvider, so it can find the BLoC.
+    return BlocConsumer<JoinMatchBloc, JoinMatchState>(
+      listener: (context, state) {
+        if (state is JoinMatchSuccess) {
+          context.pushReplacement(
+            '/controller/scoreboard',
+            extra: state.controller,
+          );
+        }
+        if (state is JoinMatchFailure) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is JoinMatchLoading;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 32),
+                TextField(
+                  controller: _codeController,
+                  decoration: InputDecoration(
+                    labelText: "Enter game code",
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withAlpha(13),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blueAccent.shade200),
+                    ),
                   ),
+                  style: const TextStyle(color: Colors.white),
                 ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loading ? null : _joinMatch,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.purpleAccent,
-                ),
-                child: _loading
-                    ? const CircularProgressIndicator()
-                    : Text(
-                        "Join Match",
-                        style: GoogleFonts.oswald(
-                          color: Colors.white,
-                          fontSize: 22,
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: isLoading ? null : _dispatchJoinEvent,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.purpleAccent,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          "Join Match",
+                          style: GoogleFonts.oswald(
+                            color: Colors.white,
+                            fontSize: 22,
+                          ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-      drawer: const AppDrawer(),
+        );
+      },
     );
   }
 }

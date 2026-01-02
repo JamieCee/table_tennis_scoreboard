@@ -1,167 +1,194 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:table_tennis_scoreboard/controllers/auth_controller.dart';
+import 'package:table_tennis_scoreboard/services/auth_manager.dart';
 import 'package:table_tennis_scoreboard/shared/styled_text.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
+import 'package:table_tennis_scoreboard/widgets/subscription_banner.dart';
 
+import '../bloc/auth/auth_bloc.dart';
 import '../theme.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => AuthBloc(authManager: context.read<AuthManager>()),
+      child: const Scaffold(
+        backgroundColor: Color(0xff3E4249),
+        drawer: AppDrawer(),
+        // The LoginForm is now the direct child and will get a context
+        // that knows about the AuthBloc.
+        body: LoginForm(),
+      ),
+    );
+  }
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginForm extends StatefulWidget {
+  const LoginForm({super.key});
+
+  @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authController = AuthController();
 
-  bool _loading = false;
-  String? _error;
-
-  Future<void> _login() async {
+  void _login() {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final result = await _authController.login(
-      context,
-      _emailController.text.trim(),
-      _passwordController.text,
+    // Dispatch the event to the Bloc
+    context.read<AuthBloc>().add(
+      LoginRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      ),
     );
+  }
 
-    setState(() => _loading = false);
-
-    if (!mounted) return;
-
-    if (result == LoginResult.invalidCredentials) {
-      setState(() {
-        _error = 'Invalid Login Credentials';
-      });
-    }
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xff3E4249),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.sports_tennis,
-                  color: AppColors.purpleAccent,
-                  size: 100,
-                ),
-                const SizedBox(height: 40),
-                const StyledHeading('Sign In'),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email..',
-                    border: OutlineInputBorder(),
+    // This is a robust pattern to ensure the listener and builders
+    // all have access to the bloc without any context ambiguity.
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        // The main UI is built here.
+        // Now, we'll wrap this UI with the listener.
+        return BlocListener<AuthBloc, AuthState>(
+          listener: (context, listenState) {
+            // Use a different name for the state to avoid confusion
+            if (listenState is AuthSuccess) {
+              context.go('/home');
+            } else if (listenState is AuthNotSubscribed) {
+              context.go('/subscribe');
+            } else if (listenState is AuthFailure) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(listenState.error),
+                    backgroundColor: Colors.red,
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter an email'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password..',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter a password'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
+                );
+            }
+          },
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // This part can use the 'state' from the BlocBuilder
+                    if (state is AuthNotSubscribed)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 24.0),
+                        child: SubscriptionBanner(),
+                      )
+                    else
+                      const SizedBox.shrink(),
+
+                    Icon(
+                      Icons.sports_tennis,
+                      color: AppColors.purpleAccent,
+                      size: 100,
                     ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purpleAccent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 18,
+                    const SizedBox(height: 40),
+                    const StyledHeading('Sign In'),
+                    const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email..',
+                        border: OutlineInputBorder(),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter an email'
+                          : null,
                     ),
-                    child: _loading
-                        ? const CircularProgressIndicator()
-                        : Text(
-                            "Login",
-                            style: GoogleFonts.oswald(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password..',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter a password'
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+                    // This button also uses the 'state' from the outer BlocBuilder
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: ElevatedButton(
+                        onPressed: state is AuthLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.purpleAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Join as spectator button
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      context.go('/join-match');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 18,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: state is AuthLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                "Login",
+                                style: GoogleFonts.oswald(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                       ),
                     ),
-                    child: Text(
-                      "Join as Spectator",
-                      style: GoogleFonts.oswald(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: TextButton(
+                        onPressed: () => context.go('/join-match'),
+                        style: TextButton.styleFrom(
+                          backgroundColor: AppColors.midnightBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          "Join as Spectator",
+                          style: GoogleFonts.oswald(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-      drawer: const AppDrawer(),
+        );
+      },
     );
   }
 }

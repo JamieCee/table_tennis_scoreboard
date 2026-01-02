@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_tennis_scoreboard/bloc/match_check/match_check_bloc.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
@@ -19,76 +19,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _checkForActiveMatch();
-    });
-  }
-
-  Future<void> _checkForActiveMatch() async {
-    if (!mounted) return;
-
-    final route = ModalRoute.of(context);
-    if (route == null || !route.isCurrent) return; // <<< KEY GUARD
-
-    final prefs = await SharedPreferences.getInstance();
-    final matchId = prefs.getString('activeMatchId');
-
-    if (matchId == null || !mounted) return;
-
-    // Check if match still exists in firestore
-    final matchDoc = await FirebaseFirestore.instance
-        .collection('matches')
-        .doc(matchId)
-        .get();
-    if (!matchDoc.exists || (matchDoc.data()?['isMatchOver'] ?? false)) {
-      await prefs.remove('activeMatchId');
-      return;
-    }
-
-    // If we're here, there is a match
-    showDialog(
-      context: context,
-      barrierDismissible: false, // An option must be chosen
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Resume Match?'),
-          content: const Text(
-            'You have an unfinished match. Would you like to continue where you left off?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () async {
-                await prefs.remove('activeMatchId');
-
-                // Delete match id from firestore
-                await FirebaseFirestore.instance
-                    .collection('matches')
-                    .doc(matchId)
-                    .delete();
-
-                context.go('/home');
-                // Navigator.of(context).pop();
-              },
-              child: const Text('Discard'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _resumeMatchAsController(matchId, matchDoc.data()!);
-              },
-              child: const Text('Resume'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _resumeMatchAsController(
     String matchId,
     Map<String, dynamic> matchData,
@@ -142,98 +72,149 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kIsWeb) {
       return const JoinMatchScreen();
     } else {
-      return Scaffold(
-        backgroundColor: const Color(0xff3E4249),
-        appBar: AppBar(
-          title: Text(
-            'TT Scoreboard',
-            style: GoogleFonts.oswald(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          backgroundColor: AppColors.primaryBackground,
-          leading: Builder(
-            builder: (context) {
-              return IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
+      return BlocProvider(
+        create: (context) => MatchCheckBloc()..add(CheckForActiveMatch()),
+        child: BlocListener<MatchCheckBloc, MatchCheckState>(
+          listener: (context, state) {
+            if (state is ActiveMatchFound) {
+              _showResumeMatchDialog(context, state.matchId, state.matchData);
+            } else if (state is MatchCheckError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.redAccent,
+                  content: Text(state.message),
+                ),
               );
-            },
-          ),
-        ),
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.sports_tennis,
-                    color: AppColors.purpleAccent,
-                    size: 100,
-                  ),
-                  const SizedBox(height: 40),
-                  Text(
-                    "TT Scoreboard",
-                    style: GoogleFonts.bebasNeue(
-                      color: Colors.white,
-                      fontSize: 56,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-
-                  // --- Start New Match Button ---
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.purple.withValues(
-                            alpha: 0.8,
-                          ), // shadow color
-                          spreadRadius: 0,
-                          blurRadius: 6, // softness of shadow
-                          offset: Offset(0, 8), // vertical offset
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        context.go('/team-setup');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.purpleAccent,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 18,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        "Start New Match",
-                        style: GoogleFonts.oswald(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            }
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xff3E4249),
+            appBar: AppBar(
+              title: Text(''),
+              backgroundColor: AppColors.primaryBackground,
+              leading: Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
+                  );
+                },
               ),
             ),
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.sports_tennis,
+                        color: AppColors.purpleAccent,
+                        size: 100,
+                      ),
+                      const SizedBox(height: 40),
+                      Text(
+                        "Digital Scoreboard",
+                        style: GoogleFonts.bebasNeue(
+                          color: Colors.white,
+                          fontSize: 40,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 60),
+
+                      // --- Start New Match Button ---
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(
+                                alpha: 0.8,
+                              ), // shadow color
+                              spreadRadius: 0,
+                              blurRadius: 6, // softness of shadow
+                              offset: Offset(0, 8), // vertical offset
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            context.go('/team-setup');
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.purpleAccent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 18,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            "Start New Match",
+                            style: GoogleFonts.oswald(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            drawer: const AppDrawer(),
           ),
         ),
-        drawer: const AppDrawer(),
       );
     }
+  }
+
+  void _showResumeMatchDialog(
+    BuildContext context,
+    String matchId,
+    Map<String, dynamic> matchData,
+  ) {
+    final matchCheckBloc = BlocProvider.of<MatchCheckBloc>(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        // Use a different context name
+        return AlertDialog(
+          title: const Text('Resume Match?'),
+          content: const Text(
+            'You have an unfinished match. Would you like to continue where you left off?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                // 3. Dispatch an event to the Bloc
+                matchCheckBloc.add(DiscardActiveMatch(matchId: matchId));
+                Navigator.of(dialogContext).pop(); // Close the dialog
+              },
+              child: const Text('Discard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(); // Close dialog before navigating
+                _resumeMatchAsController(matchId, matchData);
+              },
+              child: const Text('Resume'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

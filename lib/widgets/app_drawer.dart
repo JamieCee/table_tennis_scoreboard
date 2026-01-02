@@ -34,7 +34,7 @@ class AppDrawer extends StatelessWidget {
             child: const Align(
               alignment: Alignment.centerLeft, // Aligns the text to the left
               child: Text(
-                'TT Scoreboard',
+                'Digital Scoreboard',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -53,12 +53,24 @@ class AppDrawer extends StatelessWidget {
             ),
           if (authManager.isAuthenticated) ...[
             // --- HOME TILE ---
+            if (authManager.isSubscribed) ...[
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Home'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/home');
+                },
+              ),
+            ],
+
+            //TODO: Will need to add a check later to prevent a controller from joining a match while they are active
             ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Home'),
+              title: const Text('Join Match'),
+              leading: const Icon(Icons.sports_tennis),
               onTap: () {
                 Navigator.pop(context);
-                context.go('/home');
+                context.go('/join-match');
               },
             ),
 

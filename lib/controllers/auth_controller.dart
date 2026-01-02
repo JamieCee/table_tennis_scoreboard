@@ -46,7 +46,7 @@ class AuthController {
 
     // CHANGE 2: After successfully saving the token, notify the AuthManager.
     // 'listen: false' is crucial here because we are in a method, not a widget's build method.
-    Provider.of<AuthManager>(context, listen: false).login();
+    Provider.of<AuthManager>(context, listen: false).login(isSubscribed);
 
     // If the user is not subscribed, return notSubscribed
     if (!isSubscribed) {
