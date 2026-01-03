@@ -46,6 +46,37 @@ class Game {
     };
   }
 
+  // -------------------------
+  // NEW copyWith method
+  // -------------------------
+  Game copyWith({
+    int? order,
+    bool? isDoubles,
+    List<Player>? homePlayers,
+    List<Player>? awayPlayers,
+    List<SetScore>? sets,
+    int? setsWonHome,
+    int? setsWonAway,
+    bool? homeTimeoutUsed,
+    bool? awayTimeoutUsed,
+    Player? startingServer,
+    Player? startingReceiver,
+  }) {
+    return Game(
+      order: order ?? this.order,
+      isDoubles: isDoubles ?? this.isDoubles,
+      homePlayers: homePlayers ?? List.from(this.homePlayers),
+      awayPlayers: awayPlayers ?? List.from(this.awayPlayers),
+      sets: sets ?? List.from(this.sets),
+      setsWonHome: setsWonHome ?? this.setsWonHome,
+      setsWonAway: setsWonAway ?? this.setsWonAway,
+      homeTimeoutUsed: homeTimeoutUsed ?? this.homeTimeoutUsed,
+      awayTimeoutUsed: awayTimeoutUsed ?? this.awayTimeoutUsed,
+      startingServer: startingServer ?? this.startingServer,
+      startingReceiver: startingReceiver ?? this.startingReceiver,
+    );
+  }
+
   factory Game.fromMap(Map<String, dynamic> map) {
     return Game(
       order: map['order'],

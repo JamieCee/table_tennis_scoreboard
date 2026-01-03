@@ -2,8 +2,10 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:table_tennis_scoreboard/bloc/match_controller/match_controller_bloc.dart';
 import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/home_screen.dart';
@@ -14,6 +16,7 @@ import 'package:table_tennis_scoreboard/screens/scoreboard_display.dart';
 import 'package:table_tennis_scoreboard/screens/subscription_screen.dart';
 import 'package:table_tennis_scoreboard/screens/team_setup_screen.dart';
 import 'package:table_tennis_scoreboard/services/auth_manager.dart';
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 import 'package:table_tennis_scoreboard/splash_screen.dart';
 
 class AppRouter {
@@ -22,13 +25,8 @@ class AppRouter {
   AppRouter({required this.authManager});
 
   late final GoRouter router = GoRouter(
-    // Listen to the AuthManager for changes in authentication state.
     refreshListenable: authManager,
-
-    // Set the initial route. The redirect logic will handle where to go from there.
     initialLocation: '/',
-
-    // --- ROUTE GUARD (REDIRECT) LOGIC ---
     redirect: (BuildContext context, GoRouterState state) {
       final authManager = Provider.of<AuthManager>(context, listen: false);
       final bool loggedIn = authManager.isAuthenticated;
@@ -41,23 +39,17 @@ class AppRouter {
       final isPublicOnlyRoute = location == '/login' || location == '/';
       final isGoingToSubscribe = location == '/subscribe';
 
-      // Can spectate game
-      final bool isSpectatorRoute =
+      final isSpectatorRoute =
           location == '/controller/scoreboard' ||
           location == '/controller/match-card';
 
-      // Define which routes are protected and require authentication.
       final isAuthRoute =
           (location.startsWith('/home') ||
               location.startsWith('/controller') ||
               location.startsWith('/team-setup')) &&
           !isSpectatorRoute;
 
-      // --- RULES ---
-
       if (loggedIn && !isSubscribed && !isGoingToSubscribe) {
-        // If the user is logged in, NOT subscribed, and NOT already going to the subscribe page,
-        // force them to the subscribe page.
         return '/subscribe';
       }
 
@@ -65,36 +57,27 @@ class AppRouter {
         return null;
       }
 
-      // 1. Web spectator logic:
       if (kIsWeb) {
-        // On web, you can't be a controller. Redirect to join match page.
         if (location.startsWith('/controller')) {
           return '/join-match';
         }
-        // Otherwise, allow access to view other pages like scoreboard.
         return null;
       }
 
-      // 2. Unauthenticated user trying to access a protected route.
       if (!loggedIn && isAuthRoute) {
-        return '/login'; // Redirect to the login screen.
+        return '/login';
       }
 
-      // 3. Authenticated user trying to access a public-only route (like login).
       if (loggedIn && isSubscribed && isPublicOnlyRoute) {
         return '/home';
       }
 
-      // Rule #6: An authenticated but unsubscribed user lands on the subscribe page. Do not redirect them.
       if (loggedIn && !isSubscribed && isGoingToSubscribe) {
         return null;
       }
 
-      // 4. No redirection needed, proceed to the intended route.
       return null;
     },
-
-    // --- ROUTES CONFIGURATION ---
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
@@ -115,29 +98,38 @@ class AppRouter {
         path: '/controller',
         builder: (context, state) {
           final controller = state.extra as MatchController;
-          return ChangeNotifierProvider.value(
-            value: controller,
-            child: ControllerScreen(controller: controller),
+          return BlocProvider(
+            create: (context) => MatchControllerBloc(
+              matchId: controller.matchId,
+              home: controller.home,
+              away: controller.away,
+              isObserver: controller.isObserver,
+              matchType: controller.matchType,
+              setsToWin: controller.setsToWin,
+              handicapDetails: controller.handicapDetails,
+              matchStateManager: context.read<MatchStateManager>(),
+            )..add(InitializeMatch()),
+            child: const ControllerScreen(),
           );
         },
         routes: [
           GoRoute(
             path: 'scoreboard',
             builder: (context, state) {
-              final controller = state.extra as MatchController;
-              return ChangeNotifierProvider.value(
-                value: controller,
-                child: ScoreboardDisplayScreen(controller),
+              final bloc = state.extra as MatchControllerBloc;
+              return BlocProvider.value(
+                value: bloc,
+                child: const ScoreboardDisplayScreen(),
               );
             },
           ),
           GoRoute(
             path: 'match-card',
             builder: (context, state) {
-              final controller = state.extra as MatchController;
-              return ChangeNotifierProvider.value(
-                value: controller,
-                child: MatchScorecardScreen(ctrl: controller),
+              final bloc = state.extra as MatchControllerBloc;
+              return BlocProvider.value(
+                value: bloc,
+                child: const MatchScorecardScreen(),
               );
             },
           ),

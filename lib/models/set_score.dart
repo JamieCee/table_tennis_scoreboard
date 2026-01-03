@@ -18,4 +18,8 @@ class SetScore {
       away: json['away'] as int? ?? 0,
     );
   }
+
+  SetScore copyWith({int? home, int? away}) {
+    return SetScore(home: home ?? this.home, away: away ?? this.away);
+  }
 }
