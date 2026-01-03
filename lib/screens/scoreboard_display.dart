@@ -209,6 +209,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start, // Align items to the top
                     children: [
                       _teamBlock(
                         ctrl.home.name,
@@ -216,7 +218,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                         Colors.blueAccent,
                         usedTimeout: ctrl.currentGame.homeTimeoutUsed,
                       ),
-                      _gameInfo(ctrl),
+                      // ✅ WRAP _gameInfo in an Expanded widget
+                      Expanded(child: _gameInfo(ctrl)),
                       _teamBlock(
                         ctrl.away.name,
                         ctrl.matchGamesWonAway,
@@ -323,7 +326,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   Widget _gameInfo(MatchController ctrl) {
-    if (ctrl.matchType == MatchType.singles) {
+    if (ctrl.matchType == MatchType.singles ||
+        ctrl.matchType == MatchType.handicap) {
       return Text(
         "Best of ${(ctrl.setsToWin * 2) - 1} sets",
         style: GoogleFonts.oswald(

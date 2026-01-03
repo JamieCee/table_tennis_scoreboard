@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
 import '../bloc/join_match/join_match_bloc.dart';
@@ -14,7 +15,8 @@ class JoinMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => JoinMatchBloc(),
+      create: (context) =>
+          JoinMatchBloc(matchStateManager: context.read<MatchStateManager>()),
       child: Scaffold(
         backgroundColor: AppColors.charcoal,
         appBar: AppBar(

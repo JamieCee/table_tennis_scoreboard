@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:table_tennis_scoreboard/services/api/chopper_client.dart';
 import 'package:table_tennis_scoreboard/services/auth_manager.dart';
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 
 import 'config/app_router.dart';
 import 'firebase_options.dart';
@@ -22,9 +23,14 @@ Future main() async {
   ]);
 
   runApp(
-    // Provide the AuthManager to the entire widget tree.
-    ChangeNotifierProvider(
-      create: (context) => AuthManager(),
+    MultiProvider(
+      providers: [
+        // Provider for your authentication state
+        ChangeNotifierProvider(create: (_) => AuthManager()),
+
+        // ✅ ADDED: Provider for your global match state
+        ChangeNotifierProvider(create: (_) => MatchStateManager()),
+      ],
       child: const MyApp(),
     ),
   );

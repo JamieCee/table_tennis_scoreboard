@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ✅ 1. Import the new MatchStateManager
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 
 import '../models/game.dart';
 import '../models/player.dart';
@@ -21,6 +23,9 @@ class MatchController extends ChangeNotifier {
   final int setsToWin;
 
   late final CollectionReference _matchesCollection;
+  // ✅ 2. Add MatchStateManager as a final property
+  final MatchStateManager _matchStateManager;
+
   late List<Game> games;
   late Game currentGame;
   late SetScore currentSet;
@@ -72,13 +77,16 @@ class MatchController extends ChangeNotifier {
     this.matchType = MatchType.team,
     this.setsToWin = 3,
     this.handicapDetails,
-  }) {
+    // ✅ 3. Require MatchStateManager in the constructor
+    required MatchStateManager matchStateManager,
+  }) : _matchStateManager = matchStateManager {
     _isFirstLoad = false;
     _initializeRules();
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
     _initializeGames();
     _loadGame(0);
     if (!isObserver) {
+      _matchStateManager.startControlling();
       createMatchInFirestore();
     }
     _listenToFirestore();
@@ -92,29 +100,26 @@ class MatchController extends ChangeNotifier {
     required this.matchType,
     required this.setsToWin,
     this.handicapDetails,
-    required Map<String, dynamic> resumeData, // Pass the Firestore data here
-  }) {
+    required Map<String, dynamic> resumeData,
+    // ✅ 4. Require MatchStateManager in the resume constructor as well
+    required MatchStateManager matchStateManager,
+  }) : _matchStateManager = matchStateManager {
     _isFirstLoad = true;
     _initializeRules();
 
     _matchesCollection = FirebaseFirestore.instance.collection('matches');
 
-    // 1. Rebuild the games list from the saved data
     if (resumeData['games'] != null) {
       games = (resumeData['games'] as List)
           .map((gameData) => Game.fromJson(gameData))
           .toList();
     } else {
-      // Fallback if games data is missing
       _initializeGames();
     }
 
-    // 2. Load the correct game and set based on saved index
     final savedGameIndex = resumeData['currentGameIndex'] as int? ?? 0;
     _loadGame(savedGameIndex);
 
-    // 3. Now, restore the server and receiver from the saved data.
-    //    This overrides the 'null' values set by _loadGame.
     final serverName = resumeData['currentServer'] as String?;
     if (serverName != null) {
       currentServer = Player(serverName);
@@ -124,14 +129,12 @@ class MatchController extends ChangeNotifier {
     if (receiverName != null) {
       currentReceiver = Player(receiverName);
     }
-
-    // Restore serve count
     serveCount = resumeData['serveCount'] as int? ?? 0;
-
-    // Restore deuce status
     deuce = resumeData['deuce'] as bool? ?? false;
 
-    // DO NOT call createMatchInFirestore(). The match already exists.
+    if (!isObserver) {
+      _matchStateManager.startControlling();
+    }
     _listenToFirestore();
   }
 
@@ -150,22 +153,15 @@ class MatchController extends ChangeNotifier {
     Game game;
 
     if (matchType == MatchType.handicap || matchType == MatchType.singles) {
-      // This block now handles both singles and handicap setup.
       game = Game(
         order: 1,
         isDoubles: false,
         homePlayers: [home.players[0]],
         awayPlayers: [away.players[0]],
       );
-
-      // The Game() constructor adds a default 0-0 set. Remove it.
       game.sets.clear();
-
-      // Now, add the first set using our single, reliable method.
-      // We need to temporarily assign `currentGame` so `_createNewSet` works.
       currentGame = game;
-      _createNewSet(); // This will add either a 0-0 set or a handicap set.
-
+      _createNewSet();
       games.add(game);
     } else {
       final playerCombinations = [
@@ -195,8 +191,7 @@ class MatchController extends ChangeNotifier {
         games.add(
           Game(
             order: (i ~/ 2) + 1,
-            isDoubles: i == 8, // doubles placeholder
-            // isDoubles: false,
+            isDoubles: i == 8,
             homePlayers: List.from(playerCombinations[i]),
             awayPlayers: List.from(playerCombinations[i + 1]),
           ),
@@ -241,6 +236,8 @@ class MatchController extends ChangeNotifier {
 
   Future<void> deleteMatch() async {
     if (isObserver) return;
+    // ✅ 5. Notify the manager before deleting
+    _matchStateManager.stopControlling();
     await _matchesCollection.doc(matchId).delete();
   }
 
@@ -352,24 +349,30 @@ class MatchController extends ChangeNotifier {
   }
 
   void undoPointHome() {
-    if (isObserver || isBreakActive || isTimeoutActive || currentSet.home == 0)
+    if (isObserver ||
+        isBreakActive ||
+        isTimeoutActive ||
+        currentSet.home == 0) {
       return;
+    }
     currentSet.home--;
     _pushToFirestore();
     notifyListeners();
   }
 
   void undoPointAway() {
-    if (isObserver || isBreakActive || isTimeoutActive || currentSet.away == 0)
+    if (isObserver ||
+        isBreakActive ||
+        isTimeoutActive ||
+        currentSet.away == 0) {
       return;
+    }
     currentSet.away--;
     _pushToFirestore();
     notifyListeners();
   }
 
   void _afterPoint() {
-    // serveCount++;
-
     _maybeRotateServer();
     _checkSetEnd();
     _pushToFirestore();
@@ -380,12 +383,10 @@ class MatchController extends ChangeNotifier {
     final home = currentSet.home;
     final away = currentSet.away;
 
-    // Check for deuce condition in a handicap game
     if (matchType == MatchType.handicap && home >= 20 && home == away) {
       deuce = true;
     }
 
-    // Use _pointsToWin for dynamic win condition
     if ((home >= pointsToWin || away >= pointsToWin) &&
         (home - away).abs() >= 2) {
       if (home > away) {
@@ -393,29 +394,13 @@ class MatchController extends ChangeNotifier {
       } else {
         currentGame.setsWonAway++;
       }
-
-      // Deuce is over when a set is won
       deuce = false;
-
       if (isCurrentGameCompleted) {
         _completeGame();
       } else {
         startBreak();
       }
     }
-    // if ((home >= 11 || away >= 11) && (home - away).abs() >= 2) {
-    //   if (home > away) {
-    //     currentGame.setsWonHome++;
-    //   } else {
-    //     currentGame.setsWonAway++;
-    //   }
-    //
-    //   if (isCurrentGameCompleted) {
-    //     _completeGame();
-    //   } else {
-    //     startBreak();
-    //   }
-    // }
   }
 
   bool get isCurrentGameCompleted =>
@@ -426,7 +411,7 @@ class MatchController extends ChangeNotifier {
       !isCurrentGameCompleted && !isBreakActive && !isTimeoutActive;
 
   bool get isMatchOver {
-    if (matchType == MatchType.singles) {
+    if (matchType == MatchType.singles || matchType == MatchType.handicap) {
       return matchGamesWonHome > 0 || matchGamesWonAway > 0;
     }
     final completedGames = matchGamesWonHome + matchGamesWonAway;
@@ -456,67 +441,35 @@ class MatchController extends ChangeNotifier {
     serveCount = 0;
   }
 
-  // helper method
   void _createNewSet() {
-    final newSet = SetScore(); // Always start with a fresh SetScore object.
-
-    // Apply handicap *only* if it's a handicap match.
+    final newSet = SetScore();
     if (matchType == MatchType.handicap && handicapDetails != null) {
       final playerIndex = handicapDetails!['playerIndex']!;
       final points = handicapDetails!['points']!;
-
       if (playerIndex == 0) {
-        // Home gets the head start
         newSet.home = points;
       } else {
-        // Away gets the head start
         newSet.away = points;
       }
     }
-
-    // Add the new set (either 0-0 or with a handicap) to the current game.
     currentGame.sets.add(newSet);
-    currentSet =
-        currentGame.sets.last; // Update the reference to the current set.
+    currentSet = currentGame.sets.last;
   }
 
   void _maybeRotateServer() {
     final totalPoints = currentSet.home + currentSet.away;
-
-    // Deuce Logic (common for all match types, just the point threshold changes)
     final deuceThreshold = (matchType == MatchType.handicap) ? 20 : 10;
     deuce =
         currentSet.home >= deuceThreshold && currentSet.away >= deuceThreshold;
 
     if (deuce) {
-      // In deuce, it's one serve each for all game types.
       _swapServerSingles();
-      return; // Server is swapped every point, so we are done.
+      return;
     }
-
-    // Handicap serving logic (before deuce)
-    if (matchType == MatchType.handicap) {
-      // Swap servers every 5 points (e.g., after the 5th, 10th, 15th point etc.)
-      if (totalPoints > 0 && totalPoints % 5 == 0) {
-        _swapServerSingles();
-      }
-      return; // Handicap logic is handled, exit the function.
-    }
-
-    // Standard serving logic (for Team and Singles)
-    if (totalPoints > 0 && totalPoints % 2 == 0) {
-      // This is a simpler way to handle serve changes.
-      // It swaps after 2, 4, 6, 8, etc. total points.
+    if (totalPoints > 0 && totalPoints % _servesPerTurn == 0) {
       _swapServerSingles();
     }
   }
-  // void _maybeRotateServer() {
-  //   deuce = currentSet.home >= 10 && currentSet.away >= 10;
-  //   if (serveCount >= (deuce ? 1 : 2)) {
-  //     serveCount = 0;
-  //     currentGame.isDoubles ? _rotateDoublesServer() : _swapServerSingles();
-  //   }
-  // }
 
   void _swapServerSingles() {
     final temp = currentServer;
@@ -526,7 +479,6 @@ class MatchController extends ChangeNotifier {
 
   void startBreak() {
     if (isObserver) return;
-
     remainingBreakTime = breakDuration;
     isBreakActive = true;
     onBreakStarted?.call();
@@ -542,7 +494,6 @@ class MatchController extends ChangeNotifier {
         notifyListeners();
       }
     });
-
     _pushToFirestore();
     notifyListeners();
   }
@@ -553,14 +504,10 @@ class MatchController extends ChangeNotifier {
     isBreakActive = false;
     remainingBreakTime = null;
     onBreakEnded?.call();
-
     if (!isObserver && !isCurrentGameCompleted) {
-      // --- Replace the old logic with this single line ---
-      _createNewSet(); // This correctly creates the next set.
-      // ---
+      _createNewSet();
       _setFirstServerOfSet();
     }
-
     if (!isObserver) _pushToFirestore();
     notifyListeners();
   }
@@ -573,17 +520,19 @@ class MatchController extends ChangeNotifier {
   void startTimeout({required bool isHome}) {
     if (isObserver || isTimeoutActive) return;
     if ((isHome && currentGame.homeTimeoutUsed) ||
-        (!isHome && currentGame.awayTimeoutUsed))
+        (!isHome && currentGame.awayTimeoutUsed)) {
       return;
+    }
 
     isTimeoutActive = true;
     timeoutCalledByHome = isHome;
     remainingTimeoutTime = Duration(seconds: TableTennisConfig.timeoutTimer);
 
-    if (isHome)
+    if (isHome) {
       currentGame.homeTimeoutUsed = true;
-    else
+    } else {
       currentGame.awayTimeoutUsed = true;
+    }
 
     _timeoutTimer?.cancel();
     _timeoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -598,7 +547,6 @@ class MatchController extends ChangeNotifier {
         notifyListeners();
       }
     });
-
     _pushToFirestore();
     notifyListeners();
   }
@@ -623,18 +571,14 @@ class MatchController extends ChangeNotifier {
     } else {
       matchGamesWonAway++;
     }
-    List<Map<String, int>> setScores = [];
-
-    setScores = currentGame.sets
+    List<Map<String, int>> setScores = currentGame.sets
         .map((s) => {'home': s.home, 'away': s.away})
         .toList();
-
     lastGameResult = {
       'homeScore': currentGame.setsWonHome,
       'awayScore': currentGame.setsWonAway,
       'setScores': setScores,
     };
-
     onGameFinished?.call({
       'home': currentGame.setsWonHome,
       'away': currentGame.setsWonAway,
@@ -644,12 +588,11 @@ class MatchController extends ChangeNotifier {
       nextGamePreview = games[currentGame.order];
       isTransitioning = true;
       isNextGameReady = true;
-    }
-
-    if (!isObserver) {
+    } else if (isMatchOver) {
+      // ✅ 6. Notify the manager when the match is officially over
+      _matchStateManager.stopControlling();
       _clearActiveMatchId();
     }
-
     _pushToFirestore();
     notifyListeners();
   }
@@ -659,23 +602,22 @@ class MatchController extends ChangeNotifier {
     await prefs.remove('activeMatchId');
   }
 
+  // ✅ 7. RESTORED: nextGame getter
   Game? get nextGame {
     final currentIndex = games.indexOf(currentGame);
     if (currentIndex == -1 || currentIndex + 1 >= games.length) return null;
     return games[currentIndex + 1];
   }
 
+  // ✅ 8. RESTORED: startNextGame method
   void startNextGame() {
-    if (nextGamePreview == null || isObserver) {
-      return;
-    }
+    if (nextGamePreview == null || isObserver) return;
 
     isTransitioning = false;
     isNextGameReady = false;
     lastGameResult = null;
 
     _loadGame(nextGamePreview!.order - 1); // 1-based to 0-based
-
     nextGamePreview = null;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -685,14 +627,12 @@ class MatchController extends ChangeNotifier {
         onServerSelectionNeeded?.call();
       }
     });
-
     _pushToFirestore();
-
     notifyListeners();
-
     onNextGameStarted?.call();
   }
 
+  // ✅ 9. RESTORED: setDoublesPlayers method
   void setDoublesPlayers(List<Player> home, List<Player> away) {
     if (isObserver) return;
     currentGame.homePlayers = home;
@@ -708,6 +648,8 @@ class MatchController extends ChangeNotifier {
 
   @override
   void dispose() {
+    // ✅ 10. Ensure manager is notified on dispose as a fallback
+    _matchStateManager.stopControlling();
     _breakTimer?.cancel();
     _timeoutTimer?.cancel();
     super.dispose();

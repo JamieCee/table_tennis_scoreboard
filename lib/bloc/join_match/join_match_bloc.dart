@@ -4,12 +4,17 @@ import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 
 part 'join_match_event.dart';
 part 'join_match_state.dart';
 
 class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
-  JoinMatchBloc() : super(JoinMatchInitial()) {
+  final MatchStateManager _matchStateManager;
+
+  JoinMatchBloc({required MatchStateManager matchStateManager})
+    : _matchStateManager = matchStateManager,
+      super(JoinMatchInitial()) {
     on<JoinMatchRequested>(_onJoinMatchRequested);
   }
 
@@ -65,6 +70,10 @@ class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
         isObserver: true, // OBSERVER MODE
         matchType: matchType,
         setsToWin: setsToWin ?? 3,
+        handicapDetails: data['handicapDetails'],
+        // ✅ 4. Pass the manager instance held by the BLoC
+        matchStateManager: _matchStateManager,
+        // Pass the full data to the resume constructor
       );
 
       emit(JoinMatchSuccess(controller: controller));

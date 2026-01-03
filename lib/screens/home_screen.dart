@@ -9,6 +9,7 @@ import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
 import '../controllers/match_controller.dart';
 import '../models/team.dart';
+import '../services/match_state_manager.dart';
 import '../theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setsToWin: setsToWin ?? 3,
         handicapDetails: handicapDetails,
         resumeData: matchData,
+        matchStateManager: context.read<MatchStateManager>(),
       );
 
       context.go('/controller', extra: controller);
