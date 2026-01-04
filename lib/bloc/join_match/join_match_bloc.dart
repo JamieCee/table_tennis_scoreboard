@@ -1,6 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_tennis_scoreboard/bloc/match/match_bloc.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/services/match_firestore_service.dart';
@@ -24,8 +26,6 @@ class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
   ) async {
     if (event.matchId.isEmpty) {
       emit(const JoinMatchFailure("Please enter a game code."));
-      // Revert back to initial after a validation error
-      // so the user can try again without being stuck in a failure state.
       await Future.delayed(const Duration(seconds: 2));
       emit(JoinMatchInitial());
       return;
@@ -39,16 +39,33 @@ class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
       ).streamMatch().first;
       if (!doc.exists) {
         emit(const JoinMatchFailure("Match not found."));
+        await Future.delayed(const Duration(seconds: 2));
+        emit(JoinMatchInitial());
         return;
       }
 
       final data = doc.data()!;
-      final homeTeam = data['home'];
-      final awayTeam = data['away'];
-      final matchTypeString = data['matchType'] as String?;
-      final setsToWin = data['setsToWin'] as int?;
+      final homeTeamData = data['home'] as Map<String, dynamic>;
+      final awayTeamData = data['away'] as Map<String, dynamic>;
 
-      MatchType matchType;
+      final homeTeam = Team(
+        name: homeTeamData['name'] as String,
+        players: (homeTeamData['players'] as List)
+            .map((p) => Player(p))
+            .toList(),
+      );
+
+      final awayTeam = Team(
+        name: awayTeamData['name'] as String,
+        players: (awayTeamData['players'] as List)
+            .map((p) => Player(p))
+            .toList(),
+      );
+
+      final matchTypeString = data['matchType'] as String?;
+      final setsToWin = data['setsToWin'] as int? ?? 3;
+
+      final MatchType matchType;
       if (matchTypeString == 'MatchType.singles') {
         matchType = MatchType.singles;
       } else if (matchTypeString == 'MatchType.handicap') {
@@ -57,32 +74,42 @@ class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
         matchType = MatchType.team;
       }
 
-      final controller = MatchController(
-        home: Team(
-          name: homeTeam['name'],
-          players: (homeTeam['players'] as List).map((p) => Player(p)).toList(),
-        ),
-        away: Team(
-          name: awayTeam['name'],
-          players: (awayTeam['players'] as List).map((p) => Player(p)).toList(),
-        ),
-        matchId: event.matchId,
-        isObserver: true, // OBSERVER MODE
-        matchType: matchType,
-        setsToWin: setsToWin ?? 3,
-        handicapDetails: data['handicapDetails'],
-        // ✅ 4. Pass the manager instance held by the BLoC
-        matchStateManager: _matchStateManager,
-        // Pass the full data to the resume constructor
+      final handicapData = data['handicapDetails'] as Map<String, dynamic>?;
+
+      // Convert dynamic values to int
+      final handicapDetails = handicapData?.map(
+        (key, value) => MapEntry(key, value as int),
       );
 
-      emit(JoinMatchSuccess(controller: controller));
+      // Create a new MatchBloc for this match in OBSERVER mode
+      final matchBloc = MatchBloc(
+        matchId: event.matchId,
+        home: homeTeam,
+        away: awayTeam,
+        isObserver: true,
+        matchType: matchType,
+        setsToWin: setsToWin,
+        handicapDetails: handicapDetails,
+        matchStateManager: _matchStateManager,
+      );
+
+      // Save the active match ID locally so we can resume later if needed
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('activeMatchId', event.matchId);
+
+      // Start managing state
+      // _matchStateManager.startObserving();
+
+      emit(JoinMatchSuccess(matchBloc: matchBloc));
     } catch (e) {
+      if (kDebugMode) print(e);
       emit(
         const JoinMatchFailure(
           "Failed to join match. An unexpected error occurred.",
         ),
       );
+      await Future.delayed(const Duration(seconds: 2));
+      emit(JoinMatchInitial());
     }
   }
 }

@@ -2,9 +2,10 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
+import 'package:table_tennis_scoreboard/bloc/match/match_bloc.dart';
 import 'package:table_tennis_scoreboard/screens/controller_screen.dart';
 import 'package:table_tennis_scoreboard/screens/home_screen.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
@@ -114,30 +115,30 @@ class AppRouter {
       GoRoute(
         path: '/controller',
         builder: (context, state) {
-          final controller = state.extra as MatchController;
-          return ChangeNotifierProvider.value(
-            value: controller,
-            child: ControllerScreen(controller: controller),
+          final bloc = state.extra as MatchBloc;
+          return BlocProvider.value(
+            value: bloc,
+            child: const ControllerScreen(),
           );
         },
         routes: [
           GoRoute(
             path: 'scoreboard',
             builder: (context, state) {
-              final controller = state.extra as MatchController;
-              return ChangeNotifierProvider.value(
-                value: controller,
-                child: ScoreboardDisplayScreen(controller),
+              final bloc = state.extra as MatchBloc;
+              return BlocProvider.value(
+                value: bloc,
+                child: const ScoreboardDisplayScreen(),
               );
             },
           ),
           GoRoute(
             path: 'match-card',
             builder: (context, state) {
-              final controller = state.extra as MatchController;
-              return ChangeNotifierProvider.value(
-                value: controller,
-                child: MatchScorecardScreen(ctrl: controller),
+              final bloc = state.extra as MatchBloc;
+              return BlocProvider.value(
+                value: bloc,
+                child: const MatchScorecardScreen(),
               );
             },
           ),

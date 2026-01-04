@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:table_tennis_scoreboard/bloc/match/match_bloc.dart';
 import 'package:table_tennis_scoreboard/bloc/team_setup/team_setup_bloc.dart';
-import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
 import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
@@ -89,8 +89,8 @@ class _TeamSetupViewState extends State<_TeamSetupView> {
           prev.homeTeamName != current.homeTeamName,
       listener: (context, state) {
         if (state.status == TeamSetupStatus.success &&
-            state.matchController != null) {
-          context.go('/controller', extra: state.matchController);
+            state.matchBloc != null) {
+          context.go('/controller', extra: state.matchBloc);
         }
         if (state.status == TeamSetupStatus.failure) {
           ScaffoldMessenger.of(context)

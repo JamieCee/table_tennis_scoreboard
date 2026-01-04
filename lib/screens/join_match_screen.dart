@@ -64,7 +64,7 @@ class __JoinMatchFormState extends State<_JoinMatchForm> {
         if (state is JoinMatchSuccess) {
           context.pushReplacement(
             '/controller/scoreboard',
-            extra: state.controller,
+            extra: state.matchBloc,
           );
         }
         if (state is JoinMatchFailure) {

@@ -4,9 +4,8 @@ import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:table_tennis_scoreboard/controllers/match_controller.dart';
+import 'package:table_tennis_scoreboard/bloc/match/match_bloc.dart';
 import 'package:table_tennis_scoreboard/models/player.dart';
 import 'package:table_tennis_scoreboard/models/team.dart';
 import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
@@ -77,23 +76,21 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
     StartMatchSubmitted event,
     Emitter<TeamSetupState> emit,
   ) async {
-    // For singles or handicap, only the first player name is required
+    // --- Validate player names ---
     if (state.matchType != MatchType.team) {
       if (state.homePlayerNames.first.trim().isEmpty ||
           state.awayPlayerNames.first.trim().isEmpty) {
         emit(
           state.copyWith(
             status: TeamSetupStatus.failure,
-            errorMessage: () => "Player names cannot be empty.",
+            errorMessage: "Player names cannot be empty.",
           ),
         );
-        // Reset status after a moment to allow the user to see the message and retry
         await Future.delayed(const Duration(seconds: 2));
         emit(state.copyWith(status: TeamSetupStatus.initial));
-        return; // Stop execution
+        return;
       }
     } else {
-      // For a team match, all player names are required
       final allHomePlayersValid = state.homePlayerNames.every(
         (name) => name.trim().isNotEmpty,
       );
@@ -105,13 +102,12 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
         emit(
           state.copyWith(
             status: TeamSetupStatus.failure,
-            errorMessage: () =>
-                "All player names are required for a team match.",
+            errorMessage: "All player names are required for a team match.",
           ),
         );
         await Future.delayed(const Duration(seconds: 2));
         emit(state.copyWith(status: TeamSetupStatus.initial));
-        return; // Stop execution
+        return;
       }
     }
 
@@ -138,12 +134,14 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
             : awayPlayers.first.name,
         players: awayPlayers,
       );
+
       final matchId = _generateMatchId();
 
-      final controller = MatchController(
+      final matchBloc = MatchBloc(
+        matchId: matchId,
         home: home,
         away: away,
-        matchId: matchId,
+        isObserver: false,
         matchType: state.matchType,
         setsToWin: state.setsToWin,
         handicapDetails: (state.matchType == MatchType.handicap)
@@ -155,7 +153,6 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
         matchStateManager: _matchStateManager,
       );
 
-      await controller.createMatchInFirestore();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('activeMatchId', matchId);
 
@@ -164,17 +161,16 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
       emit(
         state.copyWith(
           status: TeamSetupStatus.success,
-          matchController: () => controller,
+          matchBloc: matchBloc, // <-- updated here
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
           status: TeamSetupStatus.failure,
-          errorMessage: () => e.toString(),
+          errorMessage: e.toString(),
         ),
       );
-      // Reset status after failure to allow retry
       await Future.delayed(const Duration(seconds: 2));
       emit(state.copyWith(status: TeamSetupStatus.initial));
     }

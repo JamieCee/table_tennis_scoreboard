@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../models/player.dart';
-import '../widgets/themed_dialog.dart';
 
 /// --------------------------------------------------------------
 /// DoublesPickerDialog
@@ -32,49 +30,40 @@ class _DoublesPickerDialogState extends State<DoublesPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemedDialog(
-      title: 'Select Doubles Players',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _teamChipSection(
-            'Home Team (Select 2)',
-            widget.homePlayers,
-            _selectedHome,
-            Colors.blueAccent,
-          ),
-          const SizedBox(height: 16),
-          _teamChipSection(
-            'Away Team (Select 2)',
-            widget.awayPlayers,
-            _selectedAway,
-            Colors.redAccent,
-          ),
-        ],
+    return AlertDialog(
+      title: const Text("Select Doubles Players"),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _teamChipSection(
+              "Home Team (Select 2)",
+              widget.homePlayers,
+              _selectedHome,
+              Colors.blueAccent,
+            ),
+            const SizedBox(height: 16),
+            _teamChipSection(
+              "Away Team (Select 2)",
+              widget.awayPlayers,
+              _selectedAway,
+              Colors.redAccent,
+            ),
+          ],
+        ),
       ),
       actions: [
         ElevatedButton.icon(
-          icon: const Icon(Icons.check_circle_outline),
-          label: const Text('Confirm'),
+          icon: const Icon(Icons.check),
+          label: const Text("Confirm"),
           onPressed: (_selectedHome.length == 2 && _selectedAway.length == 2)
-              ? () {
-                  widget.onConfirm(_selectedHome, _selectedAway);
-                }
+              ? () => widget.onConfirm(_selectedHome, _selectedAway)
               : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color.fromRGBO(64, 67, 78, 1),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
         ),
       ],
     );
   }
 
-  /// Build a chip section for one team (Home/Away)
   Widget _teamChipSection(
     String title,
     List<Player> players,
@@ -86,32 +75,24 @@ class _DoublesPickerDialogState extends State<DoublesPickerDialog> {
       children: [
         Text(
           title,
-          style: GoogleFonts.robotoCondensed(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: color, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 6,
           children: players.map((p) {
             final isSelected = selected.contains(p);
             return ChoiceChip(
               label: Text(p.name),
               selected: isSelected,
+              selectedColor: color,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.black : Colors.white,
-                fontWeight: FontWeight.bold,
               ),
-              selectedColor: color,
-              backgroundColor: Colors.white10,
-              side: BorderSide(color: color.withValues(alpha: 0.4)),
               onSelected: (sel) {
                 setState(() {
-                  if (sel) {
-                    if (selected.length < 2) selected.add(p);
+                  if (sel && selected.length < 2) {
+                    selected.add(p);
                   } else {
                     selected.remove(p);
                   }

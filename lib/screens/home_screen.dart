@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:table_tennis_scoreboard/bloc/match/match_bloc.dart';
 import 'package:table_tennis_scoreboard/bloc/match_check/match_check_bloc.dart';
 import 'package:table_tennis_scoreboard/screens/join_match_screen.dart';
+import 'package:table_tennis_scoreboard/services/match_state_manager.dart';
 import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 
-import '../controllers/match_controller.dart';
 import '../models/team.dart';
-import '../services/match_state_manager.dart';
 import '../theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,22 +20,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// Resume a match by creating a MatchBloc with the saved state
   void _resumeMatchAsController(
     String matchId,
     Map<String, dynamic> matchData,
   ) {
     try {
-      // Take data from the document (database)
-      final homeTeamData = matchData['home'];
-      final awayTeamData = matchData['away'];
+      // --- Teams ---
+      final homeTeam = Team.fromJson(matchData['home']);
+      final awayTeam = Team.fromJson(matchData['away']);
+
+      // --- Match Type ---
       final matchTypeString = matchData['matchType'] as String?;
-      final setsToWin = matchData['setsToWin'] as int?;
+      final setsToWin = matchData['setsToWin'] as int? ?? 3;
       final handicapDetails = matchData['handicapDetails'] as Map<String, int>?;
 
-      final homeTeam = Team.fromJson(homeTeamData);
-      final awayTeam = Team.fromJson(awayTeamData);
-
-      // Re-create team objects from the data
       MatchType matchType;
       if (matchTypeString == 'MatchType.singles') {
         matchType = MatchType.singles;
@@ -45,20 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
         matchType = MatchType.team;
       }
 
-      // Create match controller
-      final controller = MatchController.resume(
+      // --- Create the bloc properly with all required parameters ---
+      final matchBloc = MatchBloc(
+        matchId: matchId,
         home: homeTeam,
         away: awayTeam,
-        matchId: matchId,
         isObserver: false,
         matchType: matchType,
-        setsToWin: setsToWin ?? 3,
+        setsToWin: setsToWin,
         handicapDetails: handicapDetails,
-        resumeData: matchData,
         matchStateManager: context.read<MatchStateManager>(),
       );
 
-      context.go('/controller', extra: controller);
+      // --- Dispatch resume event to load previous match data ---
+      matchBloc.add(MatchResumed(matchData));
+
+      // --- Navigate with the bloc ---
+      context.go('/controller', extra: matchBloc);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,13 +71,51 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Show a dialog prompting the user to resume or discard an active match
+  void _showResumeMatchDialog(
+    BuildContext context,
+    String matchId,
+    Map<String, dynamic> matchData,
+  ) {
+    final matchCheckBloc = BlocProvider.of<MatchCheckBloc>(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Resume Match?'),
+          content: const Text(
+            'You have an unfinished match. Would you like to continue where you left off?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                matchCheckBloc.add(DiscardActiveMatch(matchId: matchId));
+                Navigator.of(dialogContext).pop(); // Close dialog
+              },
+              child: const Text('Discard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close dialog
+                _resumeMatchAsController(matchId, matchData);
+              },
+              child: const Text('Resume'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
       return const JoinMatchScreen();
     } else {
       return BlocProvider(
-        create: (context) => MatchCheckBloc()..add(CheckForActiveMatch()),
+        create: (_) => MatchCheckBloc()..add(CheckForActiveMatch()),
         child: BlocListener<MatchCheckBloc, MatchCheckState>(
           listener: (context, state) {
             if (state is ActiveMatchFound) {
@@ -92,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Scaffold(
             backgroundColor: const Color(0xff3E4249),
             appBar: AppBar(
-              title: Text(''),
+              title: const Text(''),
               backgroundColor: AppColors.primaryBackground,
               leading: Builder(
                 builder: (context) {
@@ -127,19 +167,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 60),
-
                       // --- Start New Match Button ---
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.purple.withValues(
-                                alpha: 0.8,
-                              ), // shadow color
+                              color: AppColors.purple.withOpacity(0.8),
                               spreadRadius: 0,
-                              blurRadius: 6, // softness of shadow
-                              offset: Offset(0, 8), // vertical offset
+                              blurRadius: 6,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
@@ -177,46 +214,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-  }
-
-  void _showResumeMatchDialog(
-    BuildContext context,
-    String matchId,
-    Map<String, dynamic> matchData,
-  ) {
-    final matchCheckBloc = BlocProvider.of<MatchCheckBloc>(context);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        // Use a different context name
-        return AlertDialog(
-          title: const Text('Resume Match?'),
-          content: const Text(
-            'You have an unfinished match. Would you like to continue where you left off?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                // 3. Dispatch an event to the Bloc
-                matchCheckBloc.add(DiscardActiveMatch(matchId: matchId));
-                Navigator.of(dialogContext).pop(); // Close the dialog
-              },
-              child: const Text('Discard'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(); // Close dialog before navigating
-                _resumeMatchAsController(matchId, matchData);
-              },
-              child: const Text('Resume'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }

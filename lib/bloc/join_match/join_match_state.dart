@@ -7,24 +7,19 @@ abstract class JoinMatchState extends Equatable {
   List<Object> get props => [];
 }
 
-// The screen's initial state.
 class JoinMatchInitial extends JoinMatchState {}
 
-// State when the app is actively trying to join the match.
 class JoinMatchLoading extends JoinMatchState {}
 
-// State when the match is successfully found and joined.
-// It will hold the MatchController needed for navigation.
 class JoinMatchSuccess extends JoinMatchState {
-  final MatchController controller;
+  final MatchBloc matchBloc;
 
-  const JoinMatchSuccess({required this.controller});
+  const JoinMatchSuccess({required this.matchBloc});
 
   @override
-  List<Object> get props => [controller];
+  List<Object> get props => [matchBloc];
 }
 
-// State for when any error occurs (match not found, network error, etc.).
 class JoinMatchFailure extends JoinMatchState {
   final String error;
 

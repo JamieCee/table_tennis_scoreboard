@@ -1,61 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../controllers/match_controller.dart';
+import '../../bloc/match/match_bloc.dart';
 import '../../theme.dart';
 
-class PointsCounter extends StatefulWidget {
-  const PointsCounter({super.key, required this.ctrl});
+class PointsCounter extends StatelessWidget {
+  const PointsCounter({super.key});
 
-  final MatchController ctrl;
-
-  @override
-  State<PointsCounter> createState() => _PointsCounterState();
-}
-
-class _PointsCounterState extends State<PointsCounter> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Expanded(
-            child: _scoreColumn(
-              widget.ctrl.currentGame.homePlayers
-                  .map((p) => p.name)
-                  .join(" & "),
-              widget.ctrl.currentSet.home,
-              widget.ctrl.currentGame.setsWonHome,
-              widget.ctrl.currentGame.homeTimeoutUsed,
-            ),
+    return BlocBuilder<MatchBloc, MatchState>(
+      builder: (context, state) {
+        final game = state.currentGame;
+        final setScore = state.currentSet;
+
+        // If either is null, show nothing
+        if (game == null || setScore == null) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _scoreColumn(
-              widget.ctrl.currentGame.awayPlayers
-                  .map((p) => p.name)
-                  .join(" & "),
-              widget.ctrl.currentSet.away,
-              widget.ctrl.currentGame.setsWonAway,
-              widget.ctrl.currentGame.awayTimeoutUsed,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: _scoreColumn(
+                  game.homePlayers.map((p) => p.name).join(' & '),
+                  setScore.home,
+                  game.setsWonHome,
+                  game.homeTimeoutUsed,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _scoreColumn(
+                  game.awayPlayers.map((p) => p.name).join(' & '),
+                  setScore.away,
+                  game.setsWonAway,
+                  game.awayTimeoutUsed,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _scoreColumn(String label, int points, int sets, bool usedTimeout) {
+  Widget _scoreColumn(String name, int points, int sets, bool timeoutUsed) {
     return Column(
       children: [
         Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
           softWrap: true,
           overflow: TextOverflow.visible,
@@ -65,10 +65,10 @@ class _PointsCounterState extends State<PointsCounter> {
           'Sets: $sets',
           style: const TextStyle(fontSize: 18, color: Colors.grey),
         ),
-        if (usedTimeout)
+        if (timeoutUsed)
           Padding(
-            padding: EdgeInsets.only(left: 6),
-            child: Icon(Icons.timer, color: AppColors.white, size: 18),
+            padding: const EdgeInsets.only(left: 6),
+            child: Icon(Icons.timer, size: 18, color: AppColors.white),
           ),
       ],
     );

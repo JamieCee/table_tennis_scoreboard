@@ -1,11 +1,8 @@
-// lib/bloc/team_setup/team_setup_state.dart
 part of 'team_setup_bloc.dart';
 
-// Enum to represent the status of the form submission
 enum TeamSetupStatus { initial, loading, success, failure }
 
 class TeamSetupState extends Equatable {
-  // Define the initial state of the form
   const TeamSetupState({
     this.status = TeamSetupStatus.initial,
     this.matchType = MatchType.team,
@@ -16,7 +13,7 @@ class TeamSetupState extends Equatable {
     this.awayTeamName = 'Away Team',
     this.homePlayerNames = const ['', '', ''],
     this.awayPlayerNames = const ['', '', ''],
-    this.matchController,
+    this.matchBloc,
     this.errorMessage,
   });
 
@@ -29,10 +26,9 @@ class TeamSetupState extends Equatable {
   final String awayTeamName;
   final List<String> homePlayerNames;
   final List<String> awayPlayerNames;
-  final MatchController? matchController; // Will hold the controller on success
+  final MatchBloc? matchBloc; // <-- updated to MatchBloc
   final String? errorMessage;
 
-  // A 'copyWith' method makes it easy to create a new state based on the old one
   TeamSetupState copyWith({
     TeamSetupStatus? status,
     MatchType? matchType,
@@ -43,8 +39,8 @@ class TeamSetupState extends Equatable {
     String? awayTeamName,
     List<String>? homePlayerNames,
     List<String>? awayPlayerNames,
-    ValueGetter<MatchController?>? matchController,
-    ValueGetter<String?>? errorMessage,
+    MatchBloc? matchBloc, // <-- updated
+    String? errorMessage,
   }) {
     return TeamSetupState(
       status: status ?? this.status,
@@ -56,10 +52,8 @@ class TeamSetupState extends Equatable {
       awayTeamName: awayTeamName ?? this.awayTeamName,
       homePlayerNames: homePlayerNames ?? this.homePlayerNames,
       awayPlayerNames: awayPlayerNames ?? this.awayPlayerNames,
-      matchController: matchController != null
-          ? matchController()
-          : this.matchController,
-      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
+      matchBloc: matchBloc ?? this.matchBloc,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
@@ -74,7 +68,7 @@ class TeamSetupState extends Equatable {
     awayTeamName,
     homePlayerNames,
     awayPlayerNames,
-    matchController,
+    matchBloc,
     errorMessage,
   ];
 }

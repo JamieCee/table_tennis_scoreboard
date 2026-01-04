@@ -1,131 +1,156 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../controllers/match_controller.dart';
+import '../bloc/match/match_bloc.dart';
 import '../models/player.dart';
-import '../models/team.dart';
 
 class DoublesServerPicker extends StatefulWidget {
-  final MatchController ctrl;
-  const DoublesServerPicker(this.ctrl, {super.key});
+  const DoublesServerPicker({super.key});
 
   @override
-  State<DoublesServerPicker> createState() =>
-      _DoublesServerPickerState(this.ctrl);
+  State<DoublesServerPicker> createState() => _DoublesServerPickerState();
 }
 
 class _DoublesServerPickerState extends State<DoublesServerPicker> {
-  late final MatchController ctrl;
-
-  _DoublesServerPickerState(this.ctrl);
+  final List<Player> selectedHome = [];
+  final List<Player> selectedAway = [];
   Player? selectedServer;
   Player? selectedReceiver;
 
-  List<Player> selectedHomePlayers = [];
-  List<Player> selectedAwayPlayers = [];
-
   @override
   Widget build(BuildContext context) {
-    final homeTeam = ctrl.home;
-    final awayTeam = ctrl.away;
+    return BlocBuilder<MatchBloc, MatchState>(
+      builder: (context, state) {
+        if (state.currentGame == null) return Container(); // or some fallback
 
-    return AlertDialog(
-      title: const Text("Select Doubles Players & Server"),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTeamSelection(homeTeam, selectedHomePlayers, (p, s) {
-              setState(() {
-                if (s) {
-                  if (selectedHomePlayers.length < 2) {
-                    selectedHomePlayers.add(p);
-                  }
-                } else {
-                  selectedHomePlayers.remove(p);
-                }
-              });
-            }),
-            const SizedBox(height: 16),
-            _buildTeamSelection(awayTeam, selectedAwayPlayers, (p, s) {
-              setState(() {
-                if (s) {
-                  if (selectedAwayPlayers.length < 2) {
-                    selectedAwayPlayers.add(p);
-                  }
-                } else {
-                  selectedAwayPlayers.remove(p);
-                }
-              });
-            }),
-            const SizedBox(height: 24),
-            DropdownButtonFormField<Player>(
-              decoration: const InputDecoration(labelText: "Server"),
-              initialValue: selectedServer,
-              items: [...selectedHomePlayers, ...selectedAwayPlayers].map((p) {
-                return DropdownMenuItem(value: p, child: Text(p.name));
-              }).toList(),
-              onChanged: (p) => setState(() => selectedServer = p),
+        final homePlayers = state.currentGame!.homePlayers;
+        final awayPlayers = state.currentGame!.awayPlayers;
+
+        return AlertDialog(
+          title: const Text("Select Doubles Players & Server"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                _teamChipSection(
+                  "Home Team (Select 2)",
+                  homePlayers,
+                  selectedHome,
+                  Colors.blueAccent,
+                ),
+                const SizedBox(height: 16),
+                _teamChipSection(
+                  "Away Team (Select 2)",
+                  awayPlayers,
+                  selectedAway,
+                  Colors.redAccent,
+                ),
+                const SizedBox(height: 24),
+                _serverReceiverSection(),
+              ],
             ),
-            DropdownButtonFormField<Player>(
-              decoration: const InputDecoration(labelText: "Receiver"),
-              initialValue: selectedReceiver,
-              items: [...selectedHomePlayers, ...selectedAwayPlayers].map((p) {
-                return DropdownMenuItem(value: p, child: Text(p.name));
-              }).toList(),
-              onChanged: (p) => setState(() => selectedReceiver = p),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed:
+                  selectedHome.length == 2 &&
+                      selectedAway.length == 2 &&
+                      selectedServer != null &&
+                      selectedReceiver != null
+                  ? () {
+                      context.read<MatchBloc>().add(
+                        SetDoublesPlayers(
+                          home: selectedHome,
+                          away: selectedAway,
+                        ),
+                      );
+                      context.read<MatchBloc>().add(
+                        SetDoublesServer(
+                          server: selectedServer!,
+                          receiver: selectedReceiver!,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  : null,
+              child: const Text("Set"),
             ),
           ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed:
-              selectedServer != null &&
-                  selectedReceiver != null &&
-                  selectedHomePlayers.length == 2 &&
-                  selectedAwayPlayers.length == 2
-              ? () {
-                  ctrl.setDoublesPlayers(
-                    selectedHomePlayers,
-                    selectedAwayPlayers,
-                  );
-                  ctrl.setDoublesStartingServer(
-                    selectedServer!,
-                    selectedReceiver!,
-                  );
-                  Navigator.pop(context);
-                }
-              : null,
-          child: const Text("Set"),
+        );
+      },
+    );
+  }
+
+  Widget _teamChipSection(
+    String title,
+    List<Player> players,
+    List<Player> selected,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: players.map((p) {
+            final isSelected = selected.contains(p);
+            return ChoiceChip(
+              label: Text(p.name),
+              selected: isSelected,
+              selectedColor: color,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.black : Colors.white,
+              ),
+              onSelected: (sel) {
+                setState(() {
+                  if (sel && selected.length < 2) {
+                    selected.add(p);
+                  } else {
+                    selected.remove(p);
+                  }
+                });
+              },
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildTeamSelection(
-    Team team,
-    List<Player> selectedPlayers,
-    Function(Player, bool) onSelected,
-  ) {
+  Widget _serverReceiverSection() {
+    final allSelected = [...selectedHome, ...selectedAway];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "${team.name} (Select 2)",
-          style: Theme.of(context).textTheme.titleMedium,
+        const Text("Server"),
+        Wrap(
+          spacing: 8,
+          children: allSelected.map((p) {
+            return ChoiceChip(
+              label: Text(p.name),
+              selected: selectedServer == p,
+              onSelected: (_) => setState(() => selectedServer = p),
+            );
+          }).toList(),
         ),
-        ...team.players.map((p) {
-          return CheckboxListTile(
-            title: Text(p.name),
-            value: selectedPlayers.contains(p),
-            onChanged: (selected) => onSelected(p, selected ?? false),
-          );
-        }),
+        const SizedBox(height: 16),
+        const Text("Receiver"),
+        Wrap(
+          spacing: 8,
+          children: allSelected.map((p) {
+            return ChoiceChip(
+              label: Text(p.name),
+              selected: selectedReceiver == p,
+              onSelected: (_) => setState(() => selectedReceiver = p),
+            );
+          }).toList(),
+        ),
       ],
     );
   }

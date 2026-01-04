@@ -1,10 +1,9 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
-import '../controllers/match_controller.dart';
+import '../bloc/match/match_bloc.dart';
 import '../models/player.dart';
 import '../theme.dart';
 import '../widgets/doubles_server_picker.dart';
@@ -12,65 +11,36 @@ import '../widgets/scoreboard_transition.dart';
 import '../widgets/themed_dialog.dart';
 
 class ScoreboardDisplayScreen extends StatefulWidget {
-  final MatchController controller;
-  const ScoreboardDisplayScreen(this.controller, {super.key});
+  const ScoreboardDisplayScreen({super.key});
 
   @override
   State<ScoreboardDisplayScreen> createState() =>
-      _ScoreboardDisplayScreenState(this.controller);
+      _ScoreboardDisplayScreenState();
 }
 
 class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
-  late final MatchController ctrl;
-  _ScoreboardDisplayScreenState(this.ctrl);
-
   @override
   void initState() {
     super.initState();
-
-    ctrl.onMatchDeleted = () {
-      if (mounted) {
-        // Determine the correct destination based on the user's role.
-        if (ctrl.isObserver) {
-          // Observers (spectators) should be sent back to the join match screen.
-          context.go('/join-match');
-        } else {
-          // The authenticated user (controller) should be sent to their home screen.
-          context.go('/home');
-        }
-      }
-    };
-
-    if (!ctrl.isObserver) {
-      ctrl.onDoublesPlayersNeeded = () => _showDoublesPicker();
-      ctrl.onServerSelectionNeeded = () => _showServerPicker();
-    }
   }
 
-  @override
-  void dispose() {
-    ctrl.onMatchDeleted = null;
-    if (!ctrl.isObserver) {
-      ctrl.onDoublesPlayersNeeded = null;
-      ctrl.onServerSelectionNeeded = null;
-    }
-    super.dispose();
-  }
-
-  void _showDoublesPicker() {
+  void _showDoublesPicker(MatchBloc bloc) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: ctrl,
-        child: DoublesServerPicker(ctrl),
-      ),
+      builder: (_) => DoublesServerPicker(),
     );
   }
 
-  void _showServerPicker() {
+  void _showServerPicker(
+    MatchBloc bloc,
+    List<Player> homePlayers,
+    List<Player> awayPlayers,
+  ) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+
     Player? selectedServer;
 
     showDialog(
@@ -92,7 +62,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: ctrl.currentGame.homePlayers
+                      children: homePlayers
                           .map(
                             (p) => Padding(
                               padding: const EdgeInsets.symmetric(
@@ -119,7 +89,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: ctrl.currentGame.awayPlayers
+                      children: awayPlayers
                           .map(
                             (p) => Padding(
                               padding: const EdgeInsets.symmetric(
@@ -158,13 +128,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                 onPressed: selectedServer == null
                     ? null
                     : () {
-                        final receiver =
-                            ctrl.currentGame.homePlayers.contains(
-                              selectedServer,
-                            )
-                            ? ctrl.currentGame.awayPlayers.first
-                            : ctrl.currentGame.homePlayers.first;
-                        ctrl.setServer(selectedServer, receiver);
+                        final receiver = homePlayers.contains(selectedServer)
+                            ? awayPlayers.first
+                            : homePlayers.first;
+                        context.read<MatchBloc>().add(
+                          SetDoublesServer(
+                            server: selectedServer!,
+                            receiver: receiver,
+                          ),
+                        );
                         Navigator.pop(context);
                       },
                 style: ElevatedButton.styleFrom(
@@ -182,99 +154,127 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = context.watch<MatchController>();
+    return BlocBuilder<MatchBloc, MatchState>(
+      builder: (context, state) {
+        if (state.currentGame == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.charcoal,
-      appBar: ctrl.isObserver
-          ? null
-          : AppBar(
-              backgroundColor: AppColors.purple.withValues(alpha: 0.4),
-              elevation: 6,
-              title: Text(
-                'Match Scoreboard',
-                style: GoogleFonts.oswald(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+        final homePlayers = state.currentGame!.homePlayers;
+        final awayPlayers = state.currentGame!.awayPlayers;
+
+        final isObserver = false; // derive if needed
+
+        return Scaffold(
+          backgroundColor: AppColors.charcoal,
+          appBar: isObserver
+              ? null
+              : AppBar(
+                  backgroundColor: AppColors.purple.withValues(alpha: 0.4),
+                  elevation: 6,
+                  title: Text(
+                    'Match Scoreboard',
+                    style: GoogleFonts.oswald(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: ListView(
-                children: [
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start, // Align items to the top
+          body: Stack(
+            children: [
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  child: ListView(
                     children: [
-                      _teamBlock(
-                        ctrl.home.name,
-                        ctrl.matchGamesWonHome,
-                        Colors.blueAccent,
-                        usedTimeout: ctrl.currentGame.homeTimeoutUsed,
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _teamBlock(
+                            homePlayers.map((p) => p.name).join(' & '),
+                            state.matchGamesWonHome,
+                            Colors.blueAccent,
+                            usedTimeout: state.currentGame!.homeTimeoutUsed,
+                          ),
+                          Expanded(child: _gameInfo(state)),
+                          _teamBlock(
+                            awayPlayers.map((p) => p.name).join(' & '),
+                            state.matchGamesWonAway,
+                            Colors.redAccent,
+                            usedTimeout: state.currentGame!.awayTimeoutUsed,
+                          ),
+                        ],
                       ),
-                      // ✅ WRAP _gameInfo in an Expanded widget
-                      Expanded(child: _gameInfo(ctrl)),
-                      _teamBlock(
-                        ctrl.away.name,
-                        ctrl.matchGamesWonAway,
-                        Colors.redAccent,
-                        usedTimeout: ctrl.currentGame.awayTimeoutUsed,
-                      ),
+                      const SizedBox(height: 28),
+                      state.isTimeoutActive
+                          ? _timeoutTimer(state)
+                          : state.isBreakActive
+                          ? _breakTimer(state)
+                          : const SizedBox.shrink(),
+                      const SizedBox(height: 15),
+                      _mainScoreboard(state),
+                      const SizedBox(height: 10),
+                      _setScores(state),
+                      const SizedBox(height: 10),
+                      _matchOverviewFooter(state),
+                      const SizedBox(height: 20),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  ctrl.isTimeoutActive
-                      ? _timeoutTimer(ctrl)
-                      : ctrl.isBreakActive
-                      ? _breakTimer(ctrl)
-                      : const SizedBox(height: 0),
-                  const SizedBox(height: 15),
-                  _mainScoreboard(ctrl),
-                  const SizedBox(height: 10),
-                  _setScores(ctrl),
-                  const SizedBox(height: 10),
-                  _matchOverviewFooter(ctrl),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
-            ),
+              if (state.isTransitioning && state.isNextGameReady)
+                ScoreTransitionOverlay(
+                  gameNumber: state.currentGame!.order,
+                  totalGames: state.games.length,
+                  homeNames: state.currentGame!.homePlayers
+                      .map((p) => p.name)
+                      .join(' & '),
+                  awayNames: state.currentGame!.awayPlayers
+                      .map((p) => p.name)
+                      .join(' & '),
+                  homeScore:
+                      (state.lastGameResult?['homeScore'] as num?)?.toInt() ??
+                      0,
+                  awayScore:
+                      (state.lastGameResult?['awayScore'] as num?)?.toInt() ??
+                      0,
+                  setScores:
+                      (state.lastGameResult?['setScores'] as List<dynamic>?)
+                          ?.map((s) => Map<String, int>.from(s as Map))
+                          .toList() ??
+                      [],
+                  nextHomeNames: state.matchType == MatchType.singles
+                      ? state.nextGame?.homePlayers.first.name
+                      : state.nextGame?.homePlayers
+                            .map((p) => p.name)
+                            .join(' & '),
+                  nextAwayNames: state.matchType == MatchType.singles
+                      ? state.nextGame?.awayPlayers.first.name
+                      : state.nextGame?.awayPlayers
+                            .map((p) => p.name)
+                            .join(' & '),
+                  onContinue: () {
+                    context.read<MatchBloc>().add(StartNextGame());
+                  },
+                ),
+            ],
           ),
-          if (ctrl.isTransitioning && ctrl.isNextGameReady)
-            ScoreTransitionOverlay(
-              gameNumber: ctrl.currentGame.order,
-              totalGames: ctrl.games.length,
-              homeNames: ctrl.home.name,
-              awayNames: ctrl.away.name,
-              homeScore:
-                  (ctrl.lastGameResult?['homeScore'] as num?)?.toInt() ?? 0,
-              awayScore:
-                  (ctrl.lastGameResult?['awayScore'] as num?)?.toInt() ?? 0,
-              setScores:
-                  (ctrl.lastGameResult?['setScores'] as List<dynamic>?)
-                      ?.map((s) => Map<String, int>.from(s as Map))
-                      .toList() ??
-                  [],
-              nextHomeNames: ctrl.matchType == MatchType.singles
-                  ? ctrl.nextGame?.homePlayers.first.name
-                  : ctrl.nextGame?.homePlayers.map((p) => p.name).join(' & '),
-              nextAwayNames: ctrl.matchType == MatchType.singles
-                  ? ctrl.nextGame?.awayPlayers.first.name
-                  : ctrl.nextGame?.awayPlayers.map((p) => p.name).join(' & '),
-              onContinue: () => ctrl.startNextGame(),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _breakTimer(MatchController ctrl) {
-    final remainingTime = ctrl.remainingBreakTime ?? Duration.zero;
+  // ------------------- Helper Widgets ------------------- //
+
+  Widget _breakTimer(MatchState state) {
+    final remainingTime = state.remainingBreakTime ?? Duration.zero;
     return Column(
       children: [
         Text(
@@ -299,12 +299,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _timeoutTimer(MatchController ctrl) {
-    final remainingTime = ctrl.remainingTimeoutTime ?? Duration.zero;
+  Widget _timeoutTimer(MatchState state) {
+    final remainingTime = state.remainingTimeoutTime ?? Duration.zero;
     return Column(
       children: [
         Text(
-          ctrl.timeoutCalledByHome ? "HOME TIMEOUT" : "AWAY TIMEOUT",
+          state.timeoutCalledByHome ? "HOME TIMEOUT" : "AWAY TIMEOUT",
           style: GoogleFonts.oswald(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -325,11 +325,11 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _gameInfo(MatchController ctrl) {
-    if (ctrl.matchType == MatchType.singles ||
-        ctrl.matchType == MatchType.handicap) {
+  Widget _gameInfo(MatchState state) {
+    if (state.matchType == MatchType.singles ||
+        state.matchType == MatchType.handicap) {
       return Text(
-        "Best of ${(ctrl.setsToWin * 2) - 1} sets",
+        "Best of ${(state.setsToWin * 2) - 1} sets",
         style: GoogleFonts.oswald(
           fontSize: 22,
           color: Colors.white,
@@ -339,14 +339,11 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       );
     }
 
-    final homePlayers = ctrl.currentGame.homePlayers;
-    final awayPlayers = ctrl.currentGame.awayPlayers;
-
-    final homeText = homePlayers.isNotEmpty
-        ? homePlayers.map((p) => p.name).join(' & ')
+    final homeText = state.currentGame!.homePlayers.isNotEmpty
+        ? state.currentGame!.homePlayers.map((p) => p.name).join(' & ')
         : '—';
-    final awayText = awayPlayers.isNotEmpty
-        ? awayPlayers.map((p) => p.name).join(' & ')
+    final awayText = state.currentGame!.awayPlayers.isNotEmpty
+        ? state.currentGame!.awayPlayers.map((p) => p.name).join(' & ')
         : '—';
 
     return Column(
@@ -360,9 +357,11 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           ),
           textAlign: TextAlign.center,
         ),
-        if (homePlayers.isEmpty || awayPlayers.isEmpty)
+        if (state.currentGame!.homePlayers.isEmpty ||
+            state.currentGame!.awayPlayers.isEmpty)
           const SizedBox(height: 8),
-        if (homePlayers.isEmpty || awayPlayers.isEmpty)
+        if (state.currentGame!.homePlayers.isEmpty ||
+            state.currentGame!.awayPlayers.isEmpty)
           Text(
             "(Waiting for player selection...)",
             style: GoogleFonts.oswald(
@@ -372,70 +371,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _mainScoreboard(MatchController ctrl) {
-    final homePlayers = ctrl.currentGame.homePlayers;
-    final awayPlayers = ctrl.currentGame.awayPlayers;
-
-    bool isHomeServing = false;
-    if (ctrl.currentServer != null && homePlayers.isNotEmpty) {
-      isHomeServing = homePlayers.any(
-        (p) => p.name == ctrl.currentServer!.name,
-      );
-    }
-
-    bool isAwayServing = false;
-    if (ctrl.currentServer != null && awayPlayers.isNotEmpty) {
-      isAwayServing = awayPlayers.any(
-        (p) => p.name == ctrl.currentServer!.name,
-      );
-    }
-
-    bool? homeWonLastSet;
-    // Only show the winner indicator during a set break.
-    if (ctrl.isBreakActive) {
-      // Use lastWhereOrNull to safely find the last completed set.
-      final lastCompletedSet = ctrl.currentGame.sets.lastWhereOrNull((s) {
-        // A set is complete if one player reaches the target and is ahead by at least 2.
-        final isFinished =
-            (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
-            (s.home - s.away).abs() >= 2;
-        return isFinished;
-      });
-
-      // This check remains the same, as lastWhereOrNull returns null if not found.
-      if (lastCompletedSet != null) {
-        // Determine the winner from that set's score.
-        homeWonLastSet = lastCompletedSet.home > lastCompletedSet.away;
-      }
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white10.withAlpha(5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white12),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _scoreColumn(
-            score: ctrl.currentSet.home,
-            color: Colors.blueAccent,
-            isServing: isHomeServing,
-            isWinner: homeWonLastSet == true,
-          ),
-          _scoreColumn(
-            score: ctrl.currentSet.away,
-            color: Colors.redAccent,
-            isServing: isAwayServing,
-            isWinner: homeWonLastSet == false,
-          ),
-        ],
-      ),
     );
   }
 
@@ -479,19 +414,69 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
+  Widget _mainScoreboard(MatchState state) {
+    final homePlayers = state.currentGame!.homePlayers;
+    final awayPlayers = state.currentGame!.awayPlayers;
+
+    bool isHomeServing =
+        state.currentServer != null &&
+        homePlayers.contains(state.currentServer);
+
+    bool isAwayServing =
+        state.currentServer != null &&
+        awayPlayers.contains(state.currentServer);
+
+    bool? homeWonLastSet;
+    if (state.isBreakActive) {
+      final lastCompletedSet = state.currentGame!.sets.lastWhereOrNull(
+        (s) =>
+            (s.home >= state.pointsToWin || s.away >= state.pointsToWin) &&
+            (s.home - s.away).abs() >= 2,
+      );
+      if (lastCompletedSet != null) {
+        homeWonLastSet = lastCompletedSet.home > lastCompletedSet.away;
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white10.withAlpha(5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white12),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _scoreColumn(
+            score: state.currentSet!.home,
+            color: Colors.blueAccent,
+            isServing: isHomeServing,
+            isWinner: homeWonLastSet == true,
+          ),
+          _scoreColumn(
+            score: state.currentSet!.away,
+            color: Colors.redAccent,
+            isServing: isAwayServing,
+            isWinner: homeWonLastSet == false,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _scoreColumn({
     required int score,
     required Color color,
     required bool isServing,
     bool isWinner = false,
   }) {
-    // The visual indicator for the winner
     final winnerDecoration = BoxDecoration(
       border: Border.all(color: color, width: 4),
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
         BoxShadow(
-          color: color.withValues(alpha: 0.4),
+          color: color.withOpacity(0.4),
           blurRadius: 15,
           spreadRadius: 5,
         ),
@@ -514,7 +499,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
               : const SizedBox(height: 30, key: ValueKey('empty')),
         ),
         Container(
-          // Apply decoration if this player is the winner
           decoration: isWinner ? winnerDecoration : null,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Text(
@@ -530,31 +514,24 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _setScores(MatchController ctrl) {
-    final completedSets = ctrl.currentGame.sets.where((s) {
-      final isFinished =
-          (s.home >= ctrl.pointsToWin || s.away >= ctrl.pointsToWin) &&
+  Widget _setScores(MatchState state) {
+    final completedSets = state.currentGame!.sets.where((s) {
+      (s.home >= state.pointsToWin || s.away >= state.pointsToWin) &&
           (s.home - s.away).abs() >= 2;
-      return isFinished;
+      return true;
     }).toList();
 
-    if (completedSets.isEmpty) {
-      return const SizedBox(height: 60); // Keep layout consistent
-    }
+    if (completedSets.isEmpty) return const SizedBox(height: 60);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: completedSets.map((set) {
-        // Wrap each score box in an Expanded widget.
         return Expanded(
           child: Container(
-            // Reduce horizontal margin to give more room.
             padding: const EdgeInsets.symmetric(vertical: 8),
-            margin: const EdgeInsets.symmetric(horizontal: 2), // Was 4
+            margin: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(
-                15,
-              ), // Using a standard color for example
+              color: Colors.white.withAlpha(15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white12, width: 1.5),
             ),
@@ -586,7 +563,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _matchOverviewFooter(MatchController ctrl) {
+  Widget _matchOverviewFooter(MatchState state) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
@@ -601,13 +578,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
           _footerItem(
             icon: Icons.sports_tennis,
             label: "Next Serve",
-            value: ctrl.currentServer?.name ?? "--",
+            value: state.currentServer?.name ?? "--",
           ),
           _footerItem(
             icon: Icons.grid_view_rounded,
             label: "Game/Set",
             value:
-                "G${ctrl.currentGame.order} / S${ctrl.currentGame.sets.length}",
+                "G${state.currentGame!.order} / S${state.currentGame!.sets.length}",
           ),
         ],
       ),
