@@ -68,7 +68,7 @@ class MatchState extends Equatable {
     this.lastGameResult,
     this.matchType = MatchType.team,
     this.setsToWin = 3,
-    this.pointsToWin = 4,
+    this.pointsToWin = 11,
     this.isMatchOver = false,
   });
 

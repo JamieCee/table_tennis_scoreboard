@@ -62,6 +62,10 @@ class EndBreakEarly extends MatchEvent {}
 
 class EndTimeoutEarly extends MatchEvent {}
 
+class _BreakTicked extends MatchEvent {}
+
+class _TimeoutTicked extends MatchEvent {}
+
 // ------------------- NEXT GAME -------------------
 
 class StartNextGame extends MatchEvent {}

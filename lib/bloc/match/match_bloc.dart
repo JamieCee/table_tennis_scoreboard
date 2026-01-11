@@ -85,6 +85,9 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       );
     });
 
+    on<_BreakTicked>(_onBreakTicked);
+    on<_TimeoutTicked>(_onTimeoutTicked);
+
     // Next game
     on<StartNextGame>(_onStartNextGame);
 
@@ -203,7 +206,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     if (state.isBreakActive || state.isTimeoutActive) return;
     final set = state.currentSet!;
     final updatedSet = set.copyWith(home: set.home + 1);
-    final updatedState = state.copyWith(currentSet: updatedSet);
+    final updatedState = _stateWithUpdatedGames(state, updatedSet);
     // emit(state.copyWith(currentSet: updatedSet));
     _afterPoint(emit, updatedState);
   }
@@ -212,7 +215,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     if (state.isBreakActive || state.isTimeoutActive) return;
     final set = state.currentSet!;
     final updatedSet = set.copyWith(away: set.away + 1);
-    final updatedState = state.copyWith(currentSet: updatedSet);
+    final updatedState = _stateWithUpdatedGames(state, updatedSet);
     // emit(state.copyWith(currentSet: updatedSet));
     _afterPoint(emit, updatedState);
   }
@@ -221,7 +224,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     final set = state.currentSet!;
     if (set.home == 0) return;
     final updatedSet = set.copyWith(home: set.home - 1);
-    emit(state.copyWith(currentSet: updatedSet));
+    final updatedState = _stateWithUpdatedGames(state, updatedSet);
+    emit(updatedState);
     _push();
   }
 
@@ -229,16 +233,30 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     final set = state.currentSet!;
     if (set.away == 0) return;
     final updatedSet = set.copyWith(away: set.away - 1);
-    emit(state.copyWith(currentSet: updatedSet));
+    final updatedState = _stateWithUpdatedGames(state, updatedSet);
+    emit(updatedState);
     _push();
   }
 
   void _afterPoint(Emitter<MatchState> emit, MatchState currentState) {
     var stateAfterServer = _maybeRotateServer(currentState);
+
+    emit(stateAfterServer);
+    _push(); // This saves the live point score.
+
     var stateAfterSetCheck = _checkSetEnd(stateAfterServer);
 
-    emit(stateAfterSetCheck); // Emit the final, correct state
-    _push(); // This will now reliably push the new state
+    // We compare them to see if _checkSetEnd did anything.
+    if (stateAfterSetCheck != state) {
+      // The set or match is over. Emit the final state and push again.
+      emit(stateAfterSetCheck);
+      _push(); // This saves the result of the completed set/match.
+
+      // If a break should start, we need to explicitly trigger it here
+      if (state.isBreakActive) {
+        _startBreakTimer();
+      }
+    }
   }
 
   MatchState _maybeRotateServer(MatchState currentState) {
@@ -262,15 +280,62 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     return currentState;
   }
 
+  MatchState _stateWithUpdatedGames(
+    MatchState originalState,
+    SetScore updatedSet,
+  ) {
+    final currentGame = originalState.currentGame!;
+
+    // Create a mutable copy of the sets from the current game
+    final updatedSets = List<SetScore>.from(currentGame.sets);
+
+    // Replace the last (active) set with our newly updated set
+    if (updatedSets.isNotEmpty) {
+      updatedSets[updatedSets.length - 1] = updatedSet;
+    }
+
+    // Create an updated Game object with the corrected list of sets
+    final updatedGame = currentGame.copyWith(sets: updatedSets);
+
+    // Create an updated master list of all games in the match
+    final updatedGames = List<Game>.from(originalState.games);
+    final gameIndex = updatedGames.indexWhere(
+      (g) => g.order == currentGame.order,
+    );
+
+    if (gameIndex != -1) {
+      updatedGames[gameIndex] = updatedGame;
+    }
+
+    // Return a new state that has BOTH the `currentSet` and `games` list updated.
+    return originalState.copyWith(
+      currentSet: updatedSet,
+      games: updatedGames,
+      currentGame: updatedGame,
+    );
+  }
+
   MatchState _checkSetEnd(MatchState currentState) {
     final set = currentState.currentSet!;
-    if ((set.home >= pointsToWin || set.away >= pointsToWin) &&
-        (set.home - set.away).abs() >= 2) {
-      return _completeSet(
-        currentState,
-      ); // Return the state from completing the set
+
+    final homeScore = set.home;
+    final awayScore = set
+        .away; // Always get the win condition from the current state for consistency.
+    final pointsToWinForSet = currentState.pointsToWin;
+
+    // A set is won if a player reaches the required points AND has a 2-point lead.
+    final homeWins =
+        homeScore >= pointsToWinForSet && (homeScore - awayScore) >= 2;
+    final awayWins =
+        awayScore >= pointsToWinForSet && (awayScore - homeScore) >= 2;
+
+    if (homeWins || awayWins) {
+      // The set is over. Defer all logic to `_completeSet`.
+      return _completeSet(currentState);
     }
-    return currentState; // Return unchanged state if set is not over
+
+    // If the set is not over, return the state unchanged.
+    return currentState;
   }
 
   // lib/bloc/match/match_bloc.dart
@@ -392,11 +457,26 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
       ),
     );
-    _startBreakTimer(emit);
+    _startBreakTimer();
+    _push();
+  }
+
+  void _onBreakTicked(_BreakTicked e, Emitter<MatchState> emit) {
+    final remaining = state.remainingBreakTime;
+    if (remaining == null || remaining.inSeconds <= 1) {
+      add(EndBreak()); // This is now safe, as we are in a proper event handler
+    } else {
+      emit(
+        state.copyWith(
+          remainingBreakTime: remaining - const Duration(seconds: 1),
+        ),
+      );
+      // Optional: call _push() here if you want spectators to see the countdown
+    }
   }
 
   void _onEndBreak(EndBreak e, Emitter<MatchState> emit) {
-    _breakTimer?.cancel();
+    _breakTimer?.cancel(); // Important: cancel the timer
     emit(state.copyWith(isBreakActive: false, remainingBreakTime: null));
     _push();
   }
@@ -409,11 +489,26 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         remainingTimeoutTime: Duration(seconds: TableTennisConfig.timeoutTimer),
       ),
     );
-    _startTimeoutTimer(e.isHome, emit);
+    _startTimeoutTimer(); // Note: we no longer pass `emit` or `isHome`
+    _push();
+  }
+
+  void _onTimeoutTicked(_TimeoutTicked e, Emitter<MatchState> emit) {
+    final remaining = state.remainingTimeoutTime;
+    if (remaining == null || remaining.inSeconds <= 1) {
+      add(EndTimeout()); // This is now safe
+    } else {
+      emit(
+        state.copyWith(
+          remainingTimeoutTime: remaining - const Duration(seconds: 1),
+        ),
+      );
+      // Optional: call _push() here
+    }
   }
 
   void _onEndTimeout(EndTimeout e, Emitter<MatchState> emit) {
-    _timeoutTimer?.cancel();
+    _timeoutTimer?.cancel(); // Important: cancel the timer
     emit(state.copyWith(isTimeoutActive: false, remainingTimeoutTime: null));
     _push();
   }
@@ -435,35 +530,20 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   // ---------------------------------------------------------------------------
   // Timers
   // ---------------------------------------------------------------------------
-  void _startBreakTimer(Emitter<MatchState> emit) {
+  void _startBreakTimer() {
     _breakTimer?.cancel();
+    // The timer's ONLY job is to add a `_BreakTicked` event every second.
     _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final remaining = state.remainingBreakTime;
-      if (remaining == null || remaining.inSeconds <= 1) {
-        add(EndBreak());
-      } else {
-        emit(
-          state.copyWith(
-            remainingBreakTime: remaining - const Duration(seconds: 1),
-          ),
-        );
-      }
+      add(_BreakTicked());
     });
   }
 
-  void _startTimeoutTimer(bool isHome, Emitter<MatchState> emit) {
+  void _startTimeoutTimer() {
+    // No longer needs parameters
     _timeoutTimer?.cancel();
+    // The timer's ONLY job is to add a `_TimeoutTicked` event every second.
     _timeoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final remaining = state.remainingTimeoutTime;
-      if (remaining == null || remaining.inSeconds <= 1) {
-        add(EndTimeout());
-      } else {
-        emit(
-          state.copyWith(
-            remainingTimeoutTime: remaining - const Duration(seconds: 1),
-          ),
-        );
-      }
+      add(_TimeoutTicked());
     });
   }
 

@@ -30,7 +30,7 @@ class PointsCounter extends StatelessWidget {
                 child: _scoreColumn(
                   game.homePlayers.map((p) => p.name).join(' & '),
                   setScore.home,
-                  game.setsWonHome,
+                  state.matchGamesWonHome,
                   game.homeTimeoutUsed,
                 ),
               ),
@@ -39,7 +39,7 @@ class PointsCounter extends StatelessWidget {
                 child: _scoreColumn(
                   game.awayPlayers.map((p) => p.name).join(' & '),
                   setScore.away,
-                  game.setsWonAway,
+                  state.matchGamesWonAway,
                   game.awayTimeoutUsed,
                 ),
               ),

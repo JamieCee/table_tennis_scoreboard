@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:table_tennis_scoreboard/screens/controller/game_score.dart';
+import 'package:table_tennis_scoreboard/screens/controller/points_buttons.dart';
+import 'package:table_tennis_scoreboard/screens/controller/points_counter.dart';
 import 'package:table_tennis_scoreboard/shared/styled_button.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
+import 'package:table_tennis_scoreboard/widgets/break_timer_widget.dart';
+import 'package:table_tennis_scoreboard/widgets/timeout_widget.dart';
 
 import '../bloc/match/match_bloc.dart';
-import '../screens/controller/game_score.dart';
-import '../screens/controller/points_buttons.dart';
-import '../screens/controller/points_counter.dart';
-import '../widgets/break_timer_widget.dart';
-import '../widgets/timeout_widget.dart';
 import '../widgets/transition_overlay.dart';
 
 class ControllerScreen extends StatelessWidget {
@@ -41,17 +41,29 @@ class ControllerScreen extends StatelessWidget {
               body: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (state.isBreakActive) BreakTimerWidget(),
-                    if (state.isTimeoutActive) TimeoutTimerWidget(),
-                    GameAndScoreWidget(),
-                    const SizedBox(height: 16),
-                    PointsCounter(),
-                    const SizedBox(height: 30),
-                    if (!state.isMatchOver && !bloc.isObserver) PointsButtons(),
-                    const SizedBox(height: 24),
-                    if (!bloc.isObserver && state.isMatchOver)
-                      _buildCompleteMatchButton(context, bloc),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (state.isBreakActive) BreakTimerWidget(),
+                            if (state.isTimeoutActive) TimeoutTimerWidget(),
+                            GameAndScoreWidget(),
+                            const SizedBox(height: 16),
+                            PointsCounter(),
+                            const SizedBox(height: 30),
+                            if (!state.isMatchOver && !bloc.isObserver)
+                              PointsButtons(),
+                            const SizedBox(height: 24),
+                            if (!bloc.isObserver && state.isMatchOver)
+                              _buildCompleteMatchButton(context, bloc),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

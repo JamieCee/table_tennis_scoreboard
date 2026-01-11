@@ -515,10 +515,14 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   }
 
   Widget _setScores(MatchState state) {
-    final completedSets = state.currentGame!.sets.where((s) {
-      (s.home >= state.pointsToWin || s.away >= state.pointsToWin) &&
-          (s.home - s.away).abs() >= 2;
-      return true;
+    final completedSets = state.currentGame!.sets.where((set) {
+      // A set is complete if a player has reached the required points AND has a 2-point lead.
+      final bool isSetFinished =
+          (set.home >= state.pointsToWin || set.away >= state.pointsToWin) &&
+          (set.home - set.away).abs() >= 2;
+
+      // We only want to show sets that are finished AND are not the currently active set.
+      return isSetFinished && set != state.currentSet;
     }).toList();
 
     if (completedSets.isEmpty) return const SizedBox(height: 60);
