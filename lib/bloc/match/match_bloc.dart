@@ -22,7 +22,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   final bool isObserver;
   final MatchType matchType;
   final int setsToWin;
-  final Map<String, int>? handicapDetails;
 
   final MatchStateManager _matchStateManager;
   final CollectionReference _matches;
@@ -45,12 +44,19 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     required this.matchType,
     required this.setsToWin,
     required MatchStateManager matchStateManager,
-    this.handicapDetails,
   }) : _matchStateManager = matchStateManager,
        _matches = FirebaseFirestore.instance.collection('matches'),
-       super(MatchState.initial()) {
-    _initRules();
-
+       servesPerTurn = (matchType == MatchType.handicap) ? 5 : 2,
+       super(
+         MatchState(
+           homeTeam: home,
+           awayTeam: away,
+           games: [],
+           matchType: matchType,
+           setsToWin: setsToWin,
+           pointsToWin: (matchType == MatchType.handicap) ? 21 : 11,
+         ),
+       ) {
     // Match lifecycle
     on<MatchStarted>(_onStarted);
     on<MatchResumed>(_onResumed);
@@ -130,12 +136,17 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     // Initialize games
     List<Game> games = [];
     if (matchType == MatchType.singles || matchType == MatchType.handicap) {
+      final initialSet = SetScore(
+        home: matchType == MatchType.handicap ? home.startingPoints : 0,
+        away: matchType == MatchType.handicap ? away.startingPoints : 0,
+      );
+
       final game = Game(
         order: 1,
         isDoubles: false,
         homePlayers: [home.players[0]],
         awayPlayers: [away.players[0]],
-        sets: [SetScore()],
+        sets: [initialSet],
       );
       // game.sets.clear();
       // game.sets.add(SetScore());
@@ -165,12 +176,14 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         [away.players[0]],
       ];
       for (int i = 0; i < playerCombinations.length; i += 2) {
+        final initialSet = SetScore();
         games.add(
           Game(
             order: (i ~/ 2) + 1,
             isDoubles: i == 8,
             homePlayers: List.from(playerCombinations[i]),
             awayPlayers: List.from(playerCombinations[i + 1]),
+            sets: [initialSet],
           ),
         );
       }
@@ -197,6 +210,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
   void _onMatchDeleted(MatchDeleted event, Emitter<MatchState> emit) {
     _matchStateManager.stopControlling();
+    _matches.doc(matchId).delete();
   }
 
   // ---------------------------------------------------------------------------
@@ -207,7 +221,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     final set = state.currentSet!;
     final updatedSet = set.copyWith(home: set.home + 1);
     final updatedState = _stateWithUpdatedGames(state, updatedSet);
-    // emit(state.copyWith(currentSet: updatedSet));
+
     _afterPoint(emit, updatedState);
   }
 
@@ -338,22 +352,16 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     return currentState;
   }
 
-  // lib/bloc/match/match_bloc.dart
-
   MatchState _completeSet(MatchState currentState) {
     final currentGame = currentState.currentGame!;
     final currentSet = currentState.currentSet!;
-    final homeWon = currentSet.home > currentSet.away;
+    final homeWonSet = currentSet.home > currentSet.away;
 
-    // Update sets within the current game
+    // --- Boilerplate: Update game and games list with the completed set ---
     final updatedSets = List<SetScore>.from(currentGame.sets);
-    // The point was already added to currentSet, so we just need to replace the last set
     updatedSets[updatedSets.length - 1] = currentSet;
-
-    // Create an updated game with the new set list
     final updatedGame = currentGame.copyWith(sets: updatedSets);
 
-    // Update the list of all games
     final updatedGames = List<Game>.from(currentState.games);
     final gameIndex = updatedGames.indexWhere(
       (g) => g.order == currentGame.order,
@@ -361,55 +369,83 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     if (gameIndex != -1) {
       updatedGames[gameIndex] = updatedGame;
     }
+    // --- End Boilerplate ---
 
-    // Update overall match score
-    int matchGamesWonHome = currentState.matchGamesWonHome;
-    int matchGamesWonAway = currentState.matchGamesWonAway;
-    if (homeWon) {
-      matchGamesWonHome++;
-    } else {
-      matchGamesWonAway++;
+    // --- Step 1: Check if the CURRENT GAME is over ---
+    // Count how many sets each player has won *in this game*.
+    int setsWonHomeInGame = 0;
+    int setsWonAwayInGame = 0;
+    for (var set in updatedGame.sets) {
+      if (set.home > set.away) {
+        setsWonHomeInGame++;
+      } else if (set.away > set.home) {
+        setsWonAwayInGame++;
+      }
     }
 
-    // Check if the match is over
-    final homeWonMatch = matchGamesWonHome >= setsToWin;
-    final awayWonMatch = matchGamesWonAway >= setsToWin;
+    final homeWonGame = setsWonHomeInGame >= currentState.setsToWin;
+    final awayWonGame = setsWonAwayInGame >= currentState.setsToWin;
 
-    if (homeWonMatch || awayWonMatch) {
-      // The match is over. Return a final state.
+    if (homeWonGame || awayWonGame) {
+      // ---- GAME IS OVER ----
+      // Update the total match score
+      int totalMatchGamesWonHome =
+          currentState.matchGamesWonHome + (homeWonGame ? 1 : 0);
+      int totalMatchGamesWonAway =
+          currentState.matchGamesWonAway + (awayWonGame ? 1 : 0);
+
+      // If it's a team match, check if we should move to the next game
+      if (currentState.matchType == MatchType.team) {
+        final nextGameIndex = gameIndex + 1;
+        if (nextGameIndex < updatedGames.length) {
+          // There's another game in the team match, prepare for it.
+          return currentState.copyWith(
+            games: updatedGames,
+            currentGame: updatedGames[nextGameIndex],
+            currentSet: updatedGames[nextGameIndex].sets.first,
+            matchGamesWonHome: totalMatchGamesWonHome,
+            matchGamesWonAway: totalMatchGamesWonAway,
+            isBreakActive: true, // Start a break between games
+            remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
+          );
+        }
+      }
+
+      // If it's NOT a team match OR it was the LAST game of a team match, the MATCH is over.
       return currentState.copyWith(
         games: updatedGames,
         currentGame: updatedGame,
-        currentSet: currentSet, // Keep the final set score
-        matchGamesWonHome: matchGamesWonHome,
-        matchGamesWonAway: matchGamesWonAway,
-        isMatchOver: true, // Set the flag indicating the match is finished
-        isBreakActive: false, // No break needed if match is over
+        matchGamesWonHome: totalMatchGamesWonHome,
+        matchGamesWonAway: totalMatchGamesWonAway,
+        isMatchOver: true,
+        isBreakActive: false,
+      );
+    } else {
+      // ---- GAME IS NOT OVER, START NEXT SET ----
+      final nextSet = SetScore(
+        home: currentState.matchType == MatchType.handicap
+            ? home.startingPoints
+            : 0,
+        away: currentState.matchType == MatchType.handicap
+            ? away.startingPoints
+            : 0,
+      );
+
+      // Add the new set to the current game
+      final gameForNextSet = updatedGame.copyWith(
+        sets: [...updatedGame.sets, nextSet],
+      );
+      updatedGames[gameIndex] = gameForNextSet;
+
+      return currentState.copyWith(
+        games: updatedGames,
+        currentGame: gameForNextSet,
+        currentSet: nextSet,
+        isBreakActive: true, // Start break between sets
+        remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
+        // Note: matchGamesWon counts are NOT updated here
       );
     }
-
-    // Prepare for the next set
-    final nextSet = SetScore();
-    // We need to find the game we just updated in the new list `updatedGames` to add the next set to it
-    final gameForNextSet = updatedGames[gameIndex];
-    final newCurrentGame = gameForNextSet.copyWith(
-      sets: [...gameForNextSet.sets, nextSet],
-    );
-    updatedGames[gameIndex] =
-        newCurrentGame; // Update the games list again with the game that contains the new empty set
-
-    // REMOVED `emit` and `_push` from here.
-
-    // Return the single, final, correct state.
-    return currentState.copyWith(
-      games: updatedGames,
-      currentGame: newCurrentGame,
-      currentSet: nextSet, // The new empty set for the next round
-      matchGamesWonHome: matchGamesWonHome,
-      matchGamesWonAway: matchGamesWonAway,
-      isBreakActive: true, // Start the break
-      remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
-    );
   }
 
   // ---------------------------------------------------------------------------
@@ -545,6 +581,12 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     _timeoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       add(_TimeoutTicked());
     });
+  }
+
+  bool get isMatchComplete {
+    final requiredGames = setsToWin;
+    return matchGamesWonHome == requiredGames ||
+        matchGamesWonAway == requiredGames;
   }
 
   // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import 'package:table_tennis_scoreboard/screens/controller/points_buttons.dart';
 import 'package:table_tennis_scoreboard/screens/controller/points_counter.dart';
 import 'package:table_tennis_scoreboard/shared/styled_button.dart';
 import 'package:table_tennis_scoreboard/theme.dart';
+import 'package:table_tennis_scoreboard/widgets/app_drawer.dart';
 import 'package:table_tennis_scoreboard/widgets/break_timer_widget.dart';
 import 'package:table_tennis_scoreboard/widgets/timeout_widget.dart';
 
@@ -29,6 +30,16 @@ class ControllerScreen extends StatelessWidget {
               appBar: AppBar(
                 title: const Text('Match Controller'),
                 centerTitle: true,
+                leading: Builder(
+                  builder: (context) {
+                    return IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () {
+                        Scaffold.of(context).openDrawer();
+                      },
+                    );
+                  },
+                ),
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.tv),
@@ -67,6 +78,7 @@ class ControllerScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              drawer: AppDrawer(),
               bottomNavigationBar: BottomAppBar(
                 color: AppColors.midnightBlue,
                 elevation: 8,
@@ -164,7 +176,7 @@ class ControllerScreen extends StatelessWidget {
       icon: const Icon(Icons.emoji_events_outlined, color: Colors.white),
       onPressed: () => context.go('/controller/match-card', extra: bloc),
       child: const Text(
-        'Complete Match',
+        'View Scorecard',
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
       ),
     );

@@ -29,12 +29,16 @@ class MatchState extends Equatable {
   final MatchType matchType;
   final int pointsToWin;
 
+  final Team homeTeam;
+  final Team awayTeam;
+
   // bool get isMatchOver {
   //   if (currentGame == null) return false;
   //   final requiredSets = 3;
   //   return currentGame!.setsWonHome >= requiredSets ||
   //       currentGame!.setsWonAway >= requiredSets;
   // }
+
   final bool isMatchOver;
 
   bool get isGameEditable {
@@ -48,6 +52,8 @@ class MatchState extends Equatable {
   Game? get nextGame => nextGamePreview;
 
   const MatchState({
+    required this.homeTeam,
+    required this.awayTeam,
     required this.games,
     this.currentGame,
     this.currentSet,
@@ -67,16 +73,14 @@ class MatchState extends Equatable {
     this.nextGamePreview,
     this.lastGameResult,
     this.matchType = MatchType.team,
-    this.setsToWin = 3,
-    this.pointsToWin = 11,
+    required this.setsToWin,
+    required this.pointsToWin,
     this.isMatchOver = false,
   });
 
-  factory MatchState.initial() {
-    return const MatchState(games: []);
-  }
-
   MatchState copyWith({
+    Team? homeTeam,
+    Team? awayTeam,
     List<Game>? games,
     Game? currentGame,
     SetScore? currentSet,
@@ -101,6 +105,8 @@ class MatchState extends Equatable {
     bool? isMatchOver,
   }) {
     return MatchState(
+      homeTeam: homeTeam ?? this.homeTeam,
+      awayTeam: awayTeam ?? this.awayTeam,
       games: games ?? this.games,
       currentGame: currentGame ?? this.currentGame,
       currentSet: currentSet ?? this.currentSet,
@@ -128,6 +134,8 @@ class MatchState extends Equatable {
 
   @override
   List<Object?> get props => [
+    homeTeam,
+    awayTeam,
     games,
     currentGame,
     currentSet,

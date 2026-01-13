@@ -152,6 +152,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
+  String _winnerName(MatchState state) {
+    final homeWon = state.matchGamesWonHome > state.matchGamesWonAway;
+    return homeWon ? state.homeTeam.name : state.awayTeam.name;
+  }
+
+  String _finalScore(MatchState state) {
+    return "${state.matchGamesWonHome} – ${state.matchGamesWonAway}";
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<MatchBloc, MatchState>(
@@ -166,6 +175,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
         final awayPlayers = state.currentGame!.awayPlayers;
 
         final isObserver = false; // derive if needed
+        final isComplete = state.isMatchOver;
 
         return Scaffold(
           backgroundColor: AppColors.charcoal,
@@ -193,38 +203,42 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                   child: ListView(
                     children: [
                       const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _teamBlock(
-                            homePlayers.map((p) => p.name).join(' & '),
-                            state.matchGamesWonHome,
-                            Colors.blueAccent,
-                            usedTimeout: state.currentGame!.homeTimeoutUsed,
-                          ),
-                          Expanded(child: _gameInfo(state)),
-                          _teamBlock(
-                            awayPlayers.map((p) => p.name).join(' & '),
-                            state.matchGamesWonAway,
-                            Colors.redAccent,
-                            usedTimeout: state.currentGame!.awayTimeoutUsed,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      state.isTimeoutActive
-                          ? _timeoutTimer(state)
-                          : state.isBreakActive
-                          ? _breakTimer(state)
-                          : const SizedBox.shrink(),
-                      const SizedBox(height: 15),
-                      _mainScoreboard(state),
-                      const SizedBox(height: 10),
-                      _setScores(state),
-                      const SizedBox(height: 10),
-                      _matchOverviewFooter(state),
-                      const SizedBox(height: 20),
+                      if (isComplete) _finalResultHeader(state),
+
+                      if (!isComplete) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _teamBlock(
+                              homePlayers.map((p) => p.name).join(' & '),
+                              state.matchGamesWonHome,
+                              Colors.blueAccent,
+                              usedTimeout: state.currentGame!.homeTimeoutUsed,
+                            ),
+                            Expanded(child: _gameInfo(state)),
+                            _teamBlock(
+                              awayPlayers.map((p) => p.name).join(' & '),
+                              state.matchGamesWonAway,
+                              Colors.redAccent,
+                              usedTimeout: state.currentGame!.awayTimeoutUsed,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        state.isTimeoutActive
+                            ? _timeoutTimer(state)
+                            : state.isBreakActive
+                            ? _breakTimer(state)
+                            : const SizedBox.shrink(),
+                        const SizedBox(height: 15),
+                        _mainScoreboard(state),
+                        const SizedBox(height: 10),
+                        _setScores(state),
+                        const SizedBox(height: 10),
+                        _matchOverviewFooter(state),
+                        const SizedBox(height: 20),
+                      ],
                     ],
                   ),
                 ),
@@ -374,6 +388,44 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
+  Widget _finalResultHeader(MatchState state) {
+    final isHomeWinner = state.matchGamesWonHome > state.matchGamesWonAway;
+
+    return Column(
+      children: [
+        Text(
+          "MATCH COMPLETE",
+          style: GoogleFonts.oswald(
+            fontSize: 22,
+            letterSpacing: 2,
+            color: Colors.white54,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _winnerName(state),
+          textAlign: TextAlign.center,
+          style: GoogleFonts.oswald(
+            fontSize: 42,
+            fontWeight: FontWeight.bold,
+            color: isHomeWinner ? Colors.blueAccent : Colors.redAccent,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Wins ${_finalScore(state)}",
+          style: GoogleFonts.oswald(
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 30),
+        _setScores(state, isComplete: true),
+      ],
+    );
+  }
+
   Widget _teamBlock(
     String name,
     int score,
@@ -476,7 +528,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
         BoxShadow(
-          color: color.withOpacity(0.4),
+          color: color.withValues(alpha: 0.4),
           blurRadius: 15,
           spreadRadius: 5,
         ),
@@ -514,15 +566,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     );
   }
 
-  Widget _setScores(MatchState state) {
+  Widget _setScores(MatchState state, {bool isComplete = false}) {
     final completedSets = state.currentGame!.sets.where((set) {
       // A set is complete if a player has reached the required points AND has a 2-point lead.
       final bool isSetFinished =
           (set.home >= state.pointsToWin || set.away >= state.pointsToWin) &&
           (set.home - set.away).abs() >= 2;
 
-      // We only want to show sets that are finished AND are not the currently active set.
-      return isSetFinished && set != state.currentSet;
+      // If the match is complete, show all finished sets. Otherwise, exclude the current one.
+      return isSetFinished && (isComplete || set != state.currentSet);
     }).toList();
 
     if (completedSets.isEmpty) return const SizedBox(height: 60);

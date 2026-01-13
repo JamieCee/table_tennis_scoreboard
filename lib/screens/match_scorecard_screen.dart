@@ -9,11 +9,33 @@ import '../theme.dart';
 class MatchScorecardScreen extends StatelessWidget {
   const MatchScorecardScreen({super.key});
 
+  (int, int) _calculateGameScore(Game game) {
+    int setsWonHome = 0;
+    int setsWonAway = 0;
+
+    for (final set in game.sets) {
+      // Skip empty "placeholder" sets at the beginning of a game
+      if (set.home == 0 && set.away == 0 && game.sets.length > 1) continue;
+
+      if (set.home > set.away) {
+        setsWonHome++;
+      } else if (set.away > set.home) {
+        setsWonAway++;
+      }
+    }
+    return (setsWonHome, setsWonAway);
+  }
+
   String _getGameWinnerName(Game game) {
-    if (game.setsWonHome > game.setsWonAway) {
+    final (gameScoreHome, gameScoreAway) = _calculateGameScore(game);
+
+    if (gameScoreHome > gameScoreAway) {
       return game.homePlayers.map((p) => p.name).join(' & ');
-    } else {
+    } else if (gameScoreAway > gameScoreHome) {
       return game.awayPlayers.map((p) => p.name).join(' & ');
+    } else {
+      // If the game is not finished or is a draw (unlikely), show no winner
+      return 'N/A';
     }
   }
 
@@ -23,11 +45,16 @@ class MatchScorecardScreen extends StatelessWidget {
       builder: (context, state) {
         final games = state.games;
 
-        int totalHomeGamesWon() =>
-            games.where((g) => g.setsWonHome > g.setsWonAway).length;
-
-        int totalAwayGamesWon() =>
-            games.where((g) => g.setsWonAway > g.setsWonHome).length;
+        int totalHomeGamesWon = 0;
+        int totalAwayGamesWon = 0;
+        for (final game in games) {
+          final (gameScoreHome, gameScoreAway) = _calculateGameScore(game);
+          if (gameScoreHome >= state.setsToWin) {
+            totalHomeGamesWon++;
+          } else if (gameScoreAway >= state.setsToWin) {
+            totalAwayGamesWon++;
+          }
+        }
 
         return Scaffold(
           backgroundColor: AppColors.charcoal,
@@ -51,6 +78,9 @@ class MatchScorecardScreen extends StatelessWidget {
                     itemCount: games.length,
                     itemBuilder: (context, index) {
                       final game = games[index];
+
+                      final (gameScoreHome, gameScoreAway) =
+                          _calculateGameScore(game);
 
                       return Container(
                         margin: const EdgeInsets.symmetric(vertical: 8),
@@ -84,7 +114,7 @@ class MatchScorecardScreen extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    '${game.setsWonHome} - ${game.setsWonAway}',
+                                    '$gameScoreHome - $gameScoreAway',
                                     style: GoogleFonts.robotoMono(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -174,13 +204,32 @@ class MatchScorecardScreen extends StatelessWidget {
                     ],
                   ),
                   child: Center(
-                    child: Text(
-                      'Final Score: ${totalHomeGamesWon()} - ${totalAwayGamesWon()}',
-                      style: GoogleFonts.oswald(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.emeraldGreen,
-                      ),
+                    child: Builder(
+                      builder: (context) {
+                        // --- START: MODIFIED LOGIC ---
+                        String finalScoreText;
+                        if (state.matchType == MatchType.team) {
+                          // For TEAM matches, the score is the total games won.
+                          finalScoreText =
+                              'Final Score: $totalHomeGamesWon - $totalAwayGamesWon';
+                        } else {
+                          // For SINGLES/HANDICAP, the score is the sets won in the first (and only) game.
+                          final (gameScoreHome, gameScoreAway) =
+                              _calculateGameScore(games.first);
+                          finalScoreText =
+                              'Final Score: $gameScoreHome - $gameScoreAway';
+                        }
+                        // --- END: MODIFIED LOGIC ---
+
+                        return Text(
+                          finalScoreText, // Use the determined score string
+                          style: GoogleFonts.oswald(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.emeraldGreen,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),

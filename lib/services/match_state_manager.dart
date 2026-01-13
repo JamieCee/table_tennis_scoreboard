@@ -27,6 +27,7 @@ class MatchStateManager with ChangeNotifier {
   void stopControlling() {
     if (_isControllingMatch) {
       _isControllingMatch = false;
+
       notifyListeners();
     }
   }

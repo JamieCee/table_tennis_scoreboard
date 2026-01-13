@@ -52,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
         isObserver: false,
         matchType: matchType,
         setsToWin: setsToWin,
-        handicapDetails: handicapDetails,
         matchStateManager: context.read<MatchStateManager>(),
       );
 

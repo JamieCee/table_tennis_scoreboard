@@ -89,7 +89,6 @@ class JoinMatchBloc extends Bloc<JoinMatchEvent, JoinMatchState> {
         isObserver: true,
         matchType: matchType,
         setsToWin: setsToWin,
-        handicapDetails: handicapDetails,
         matchStateManager: _matchStateManager,
       );
 

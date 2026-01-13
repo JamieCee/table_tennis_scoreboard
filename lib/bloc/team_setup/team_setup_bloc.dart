@@ -114,6 +114,18 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
     emit(state.copyWith(status: TeamSetupStatus.loading));
 
     try {
+      final int homeStartingPoints =
+          (state.matchType == MatchType.handicap &&
+              state.handicapPlayerIndex == 0)
+          ? state.handicapPoints.toInt()
+          : 0;
+
+      final int awayStartingPoints =
+          (state.matchType == MatchType.handicap &&
+              state.handicapPlayerIndex == 1)
+          ? state.handicapPoints.toInt()
+          : 0;
+
       final homePlayers = (state.matchType == MatchType.team)
           ? state.homePlayerNames.map((name) => Player(name)).toList()
           : [Player(state.homePlayerNames.first)];
@@ -127,12 +139,14 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
             ? state.homeTeamName
             : homePlayers.first.name,
         players: homePlayers,
+        startingPoints: homeStartingPoints,
       );
       final away = Team(
         name: (state.matchType == MatchType.team)
             ? state.awayTeamName
             : awayPlayers.first.name,
         players: awayPlayers,
+        startingPoints: awayStartingPoints,
       );
 
       final matchId = _generateMatchId();
@@ -144,12 +158,6 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
         isObserver: false,
         matchType: state.matchType,
         setsToWin: state.setsToWin,
-        handicapDetails: (state.matchType == MatchType.handicap)
-            ? {
-                'playerIndex': state.handicapPlayerIndex,
-                'points': state.handicapPoints.toInt(),
-              }
-            : null,
         matchStateManager: _matchStateManager,
       );
 
@@ -159,10 +167,7 @@ class TeamSetupBloc extends Bloc<TeamSetupEvent, TeamSetupState> {
       _matchStateManager.startControlling();
 
       emit(
-        state.copyWith(
-          status: TeamSetupStatus.success,
-          matchBloc: matchBloc, // <-- updated here
-        ),
+        state.copyWith(status: TeamSetupStatus.success, matchBloc: matchBloc),
       );
     } catch (e) {
       emit(

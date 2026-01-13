@@ -126,6 +126,21 @@ class _TeamSetupViewState extends State<_TeamSetupView> {
       builder: (context, state) {
         return Scaffold(
           backgroundColor: const Color(0xff3E4249),
+          appBar: AppBar(
+            title: const Text('Team Setup'),
+            centerTitle: true,
+            backgroundColor: AppColors.primaryBackground,
+            leading: Builder(
+              builder: (context) {
+                return IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                );
+              },
+            ),
+          ),
           drawer: const AppDrawer(),
           body: SafeArea(
             child: SingleChildScrollView(

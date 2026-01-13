@@ -1,11 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:table_tennis_scoreboard/models/game.dart';
 
 import '../../bloc/match/match_bloc.dart';
 import '../../theme.dart';
 
 class PointsCounter extends StatelessWidget {
   const PointsCounter({super.key});
+
+  // Helper function to calculate the set score for the current game
+  (int, int) _calculateCurrentGameSetScore(Game currentGame) {
+    int setsWonHome = 0;
+    int setsWonAway = 0;
+
+    // Iterate over the sets of ONLY the current game to count victories
+    for (final set in currentGame.sets) {
+      // Don't include the active, unfinished set in the tally.
+      // The last set is the current one. A set isn't won at 0-0.
+      if (set == currentGame.sets.last && (set.home < 11 && set.away < 11))
+        continue;
+
+      if (set.home > set.away) {
+        setsWonHome++;
+      } else if (set.away > set.home) {
+        setsWonAway++;
+      }
+    }
+    return (setsWonHome, setsWonAway);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +38,8 @@ class PointsCounter extends StatelessWidget {
 
         // If either is null, show nothing
         if (game == null || setScore == null) return const SizedBox.shrink();
+
+        final (setsWonHome, setsWonAway) = _calculateCurrentGameSetScore(game);
 
         return Container(
           padding: const EdgeInsets.all(12),
@@ -30,7 +54,7 @@ class PointsCounter extends StatelessWidget {
                 child: _scoreColumn(
                   game.homePlayers.map((p) => p.name).join(' & '),
                   setScore.home,
-                  state.matchGamesWonHome,
+                  setsWonHome,
                   game.homeTimeoutUsed,
                 ),
               ),
@@ -39,7 +63,7 @@ class PointsCounter extends StatelessWidget {
                 child: _scoreColumn(
                   game.awayPlayers.map((p) => p.name).join(' & '),
                   setScore.away,
-                  state.matchGamesWonAway,
+                  setsWonAway,
                   game.awayTimeoutUsed,
                 ),
               ),
