@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:table_tennis_scoreboard/widgets/team_score_display.dart';
 
 import '../bloc/match/match_bloc.dart';
 import '../models/player.dart';
@@ -353,41 +354,10 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       );
     }
 
-    return Text("");
-
-    // final homeText = state.currentGame!.homePlayers.isNotEmpty
-    //     ? state.currentGame!.homePlayers.map((p) => p.name).join(' & ')
-    //     : '—';
-    // final awayText = state.currentGame!.awayPlayers.isNotEmpty
-    //     ? state.currentGame!.awayPlayers.map((p) => p.name).join(' & ')
-    //     : '—';
-    //
-    // return Column(
-    //   children: [
-    //     Text(
-    //       "$homeText vs $awayText",
-    //       style: GoogleFonts.oswald(
-    //         fontSize: 22,
-    //         color: Colors.white,
-    //         fontWeight: FontWeight.w500,
-    //       ),
-    //       textAlign: TextAlign.center,
-    //     ),
-    //     if (state.currentGame!.homePlayers.isEmpty ||
-    //         state.currentGame!.awayPlayers.isEmpty)
-    //       const SizedBox(height: 8),
-    //     if (state.currentGame!.homePlayers.isEmpty ||
-    //         state.currentGame!.awayPlayers.isEmpty)
-    //       Text(
-    //         "(Waiting for player selection...)",
-    //         style: GoogleFonts.oswald(
-    //           fontSize: 16,
-    //           color: Colors.white54,
-    //           fontStyle: FontStyle.italic,
-    //         ),
-    //       ),
-    //   ],
-    // );
+    return TeamScoreDisplay(
+      homeScore: state.matchGamesWonHome,
+      awayScore: state.matchGamesWonAway,
+    );
   }
 
   Widget _finalResultHeader(MatchState state) {
