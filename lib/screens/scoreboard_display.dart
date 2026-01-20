@@ -174,7 +174,7 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
         final homePlayers = state.currentGame!.homePlayers;
         final awayPlayers = state.currentGame!.awayPlayers;
 
-        final isObserver = false; // derive if needed
+        final isObserver = false;
         final isComplete = state.isMatchOver;
 
         return Scaffold(
@@ -212,14 +212,14 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
                           children: [
                             _teamBlock(
                               homePlayers.map((p) => p.name).join(' & '),
-                              state.matchGamesWonHome,
+                              state.currentGame!.setsWonHome,
                               Colors.blueAccent,
                               usedTimeout: state.currentGame!.homeTimeoutUsed,
                             ),
                             Expanded(child: _gameInfo(state)),
                             _teamBlock(
                               awayPlayers.map((p) => p.name).join(' & '),
-                              state.matchGamesWonAway,
+                              state.currentGame!.setsWonAway,
                               Colors.redAccent,
                               usedTimeout: state.currentGame!.awayTimeoutUsed,
                             ),
@@ -353,39 +353,41 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       );
     }
 
-    final homeText = state.currentGame!.homePlayers.isNotEmpty
-        ? state.currentGame!.homePlayers.map((p) => p.name).join(' & ')
-        : '—';
-    final awayText = state.currentGame!.awayPlayers.isNotEmpty
-        ? state.currentGame!.awayPlayers.map((p) => p.name).join(' & ')
-        : '—';
+    return Text("");
 
-    return Column(
-      children: [
-        Text(
-          "$homeText vs $awayText",
-          style: GoogleFonts.oswald(
-            fontSize: 22,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (state.currentGame!.homePlayers.isEmpty ||
-            state.currentGame!.awayPlayers.isEmpty)
-          const SizedBox(height: 8),
-        if (state.currentGame!.homePlayers.isEmpty ||
-            state.currentGame!.awayPlayers.isEmpty)
-          Text(
-            "(Waiting for player selection...)",
-            style: GoogleFonts.oswald(
-              fontSize: 16,
-              color: Colors.white54,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-      ],
-    );
+    // final homeText = state.currentGame!.homePlayers.isNotEmpty
+    //     ? state.currentGame!.homePlayers.map((p) => p.name).join(' & ')
+    //     : '—';
+    // final awayText = state.currentGame!.awayPlayers.isNotEmpty
+    //     ? state.currentGame!.awayPlayers.map((p) => p.name).join(' & ')
+    //     : '—';
+    //
+    // return Column(
+    //   children: [
+    //     Text(
+    //       "$homeText vs $awayText",
+    //       style: GoogleFonts.oswald(
+    //         fontSize: 22,
+    //         color: Colors.white,
+    //         fontWeight: FontWeight.w500,
+    //       ),
+    //       textAlign: TextAlign.center,
+    //     ),
+    //     if (state.currentGame!.homePlayers.isEmpty ||
+    //         state.currentGame!.awayPlayers.isEmpty)
+    //       const SizedBox(height: 8),
+    //     if (state.currentGame!.homePlayers.isEmpty ||
+    //         state.currentGame!.awayPlayers.isEmpty)
+    //       Text(
+    //         "(Waiting for player selection...)",
+    //         style: GoogleFonts.oswald(
+    //           fontSize: 16,
+    //           color: Colors.white54,
+    //           fontStyle: FontStyle.italic,
+    //         ),
+    //       ),
+    //   ],
+    // );
   }
 
   Widget _finalResultHeader(MatchState state) {

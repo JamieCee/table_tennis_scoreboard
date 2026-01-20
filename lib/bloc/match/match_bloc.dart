@@ -360,7 +360,11 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     // --- Boilerplate: Update game and games list with the completed set ---
     final updatedSets = List<SetScore>.from(currentGame.sets);
     updatedSets[updatedSets.length - 1] = currentSet;
-    final updatedGame = currentGame.copyWith(sets: updatedSets);
+    final updatedGame = currentGame.copyWith(
+      sets: updatedSets,
+      setsWonHome: currentGame.setsWonHome + (homeWonSet ? 1 : 0),
+      setsWonAway: currentGame.setsWonAway + (homeWonSet ? 0 : 1),
+    );
 
     final updatedGames = List<Game>.from(currentState.games);
     final gameIndex = updatedGames.indexWhere(
@@ -443,7 +447,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         currentSet: nextSet,
         isBreakActive: true, // Start break between sets
         remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
-        // Note: matchGamesWon counts are NOT updated here
       );
     }
   }
