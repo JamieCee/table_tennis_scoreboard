@@ -9,7 +9,7 @@ class PointsCounter extends StatelessWidget {
   const PointsCounter({super.key});
 
   // Helper function to calculate the set score for the current game
-  (int, int) _calculateCurrentGameSetScore(Game currentGame) {
+  (int, int) _calculateCurrentGameSetScore(Game currentGame, int pointsToWin) {
     int setsWonHome = 0;
     int setsWonAway = 0;
 
@@ -17,12 +17,12 @@ class PointsCounter extends StatelessWidget {
     for (final set in currentGame.sets) {
       // Don't include the active, unfinished set in the tally.
       // The last set is the current one. A set isn't won at 0-0.
-      if (set == currentGame.sets.last && (set.home < 11 && set.away < 11))
+      if (set == currentGame.sets.last && (set.home < pointsToWin && set.away < pointsToWin))
         continue;
 
-      if (set.home > set.away) {
+      if (set.home >= pointsToWin && (set.home - set.away) >= 2) {
         setsWonHome++;
-      } else if (set.away > set.home) {
+      } else if (set.away >= pointsToWin && (set.away - set.home) >= 2) {
         setsWonAway++;
       }
     }
@@ -39,7 +39,7 @@ class PointsCounter extends StatelessWidget {
         // If either is null, show nothing
         if (game == null || setScore == null) return const SizedBox.shrink();
 
-        final (setsWonHome, setsWonAway) = _calculateCurrentGameSetScore(game);
+        final (setsWonHome, setsWonAway) = _calculateCurrentGameSetScore(game, state.pointsToWin);
 
         return Container(
           padding: const EdgeInsets.all(12),

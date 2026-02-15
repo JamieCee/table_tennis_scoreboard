@@ -28,12 +28,16 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // --- Teams ---
       final homeTeam = Team.fromJson(matchData['home']);
+      assert(matchData['home'] is Map<String, dynamic>, "WTF why not mappp");
+      assert(
+        matchData['away'] is Map<String, dynamic>,
+        "WTF why not mappp but for the away",
+      );
       final awayTeam = Team.fromJson(matchData['away']);
 
       // --- Match Type ---
       final matchTypeString = matchData['matchType'] as String?;
       final setsToWin = matchData['setsToWin'] as int? ?? 3;
-      final handicapDetails = matchData['handicapDetails'] as Map<String, int>?;
 
       MatchType matchType;
       if (matchTypeString == 'MatchType.singles') {
@@ -45,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // --- Create the bloc properly with all required parameters ---
+      // Create the bloc as the controller but prevent it from auto-starting
+      // (which would otherwise push an initial empty match and overwrite
+      // Firestore). We'll start controlling and then dispatch a resume.
       final matchBloc = MatchBloc(
         matchId: matchId,
         home: homeTeam,
@@ -55,10 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
         matchStateManager: context.read<MatchStateManager>(),
       );
 
-      // --- Dispatch resume event to load previous match data ---
+      // Now mark this app instance as the controller and resume from saved data
+      context.read<MatchStateManager>().startControlling();
       matchBloc.add(MatchResumed(matchData));
-
-      // --- Navigate with the bloc ---
       context.go('/controller', extra: matchBloc);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BlocListener<MatchCheckBloc, MatchCheckState>(
           listener: (context, state) {
             if (state is ActiveMatchFound) {
+              print(state.matchData);
               _showResumeMatchDialog(context, state.matchId, state.matchData);
             } else if (state is MatchCheckError) {
               ScaffoldMessenger.of(context).showSnackBar(

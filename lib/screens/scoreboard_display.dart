@@ -5,11 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:table_tennis_scoreboard/widgets/team_score_display.dart';
 
 import '../bloc/match/match_bloc.dart';
-import '../models/player.dart';
 import '../theme.dart';
-import '../widgets/doubles_server_picker.dart';
 import '../widgets/scoreboard_transition.dart';
-import '../widgets/themed_dialog.dart';
 
 class ScoreboardDisplayScreen extends StatefulWidget {
   const ScoreboardDisplayScreen({super.key});
@@ -23,134 +20,6 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
   @override
   void initState() {
     super.initState();
-  }
-
-  void _showDoublesPicker(MatchBloc bloc) {
-    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DoublesServerPicker(),
-    );
-  }
-
-  void _showServerPicker(
-    MatchBloc bloc,
-    List<Player> homePlayers,
-    List<Player> awayPlayers,
-  ) {
-    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-
-    Player? selectedServer;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => ThemedDialog(
-          title: 'Select Server',
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Choose the player who will serve first:',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: homePlayers
-                          .map(
-                            (p) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    setState(() => selectedServer = p),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: selectedServer == p
-                                      ? Colors.blueAccent
-                                      : Colors.white10,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(45),
-                                ),
-                                child: Text(p.name),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: awayPlayers
-                          .map(
-                            (p) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    setState(() => selectedServer = p),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: selectedServer == p
-                                      ? Colors.redAccent
-                                      : Colors.white10,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(45),
-                                ),
-                                child: Text(p.name),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            Center(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.check),
-                label: Text(
-                  selectedServer == null
-                      ? 'Confirm'
-                      : 'Start: ${selectedServer!.name} serves',
-                ),
-                onPressed: selectedServer == null
-                    ? null
-                    : () {
-                        final receiver = homePlayers.contains(selectedServer)
-                            ? awayPlayers.first
-                            : homePlayers.first;
-                        context.read<MatchBloc>().add(
-                          SetDoublesServer(
-                            server: selectedServer!,
-                            receiver: receiver,
-                          ),
-                        );
-                        Navigator.pop(context);
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent.shade400,
-                  foregroundColor: Colors.black,
-                  minimumSize: const Size(200, 48),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   String _winnerName(MatchState state) {
@@ -174,112 +43,116 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
         final homePlayers = state.currentGame!.homePlayers;
         final awayPlayers = state.currentGame!.awayPlayers;
-
-        final isObserver = false;
         final isComplete = state.isMatchOver;
 
-        return Scaffold(
-          backgroundColor: AppColors.charcoal,
-          appBar: isObserver
-              ? null
-              : AppBar(
-                  backgroundColor: AppColors.purple.withValues(alpha: 0.4),
-                  elevation: 6,
-                  title: Text(
-                    'Match Scoreboard',
-                    style: GoogleFonts.oswald(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+        // Determine if this device is an observer
+        final isObserver = context.read<MatchBloc>().isObserver;
+
+        return WillPopScope(
+          onWillPop: () async => !isObserver, // Prevent back navigation for observers
+          child: Scaffold(
+            backgroundColor: AppColors.charcoal,
+            appBar: (!isObserver && !isComplete)
+                ? AppBar(
+                    backgroundColor: AppColors.purple.withValues(alpha: 0.4),
+                    elevation: 6,
+                    title: Text(
+                      'Match Scoreboard',
+                      style: GoogleFonts.oswald(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  )
+                : null,
+            body: Stack(
+              children: [
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    child: ListView(
+                      children: [
+                        const SizedBox(height: 20),
+                        if (isComplete)
+                          _finalResultHeader(state)
+                        else ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _teamBlock(
+                                homePlayers.map((p) => p.name).join(' & '),
+                                state.currentGame!.setsWonHome,
+                                Colors.blueAccent,
+                                usedTimeout: state.currentGame!.homeTimeoutUsed,
+                              ),
+                              Expanded(child: _gameInfo(state)),
+                              _teamBlock(
+                                awayPlayers.map((p) => p.name).join(' & '),
+                                state.currentGame!.setsWonAway,
+                                Colors.redAccent,
+                                usedTimeout: state.currentGame!.awayTimeoutUsed,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+                          state.isTimeoutActive
+                              ? _timeoutTimer(state)
+                              : state.isBreakActive
+                              ? _breakTimer(state)
+                              : const SizedBox.shrink(),
+                          const SizedBox(height: 15),
+                          _mainScoreboard(state),
+                          const SizedBox(height: 10),
+                          _setScores(state),
+                          const SizedBox(height: 10),
+                          _matchOverviewFooter(state),
+                          const SizedBox(height: 20),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-          body: Stack(
-            children: [
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+                if (state.isTransitioning && state.isNextGameReady)
+                  ScoreTransitionOverlay(
+                    gameNumber: state.currentGame!.order,
+                    totalGames: state.games.length,
+                    homeNames: state.currentGame!.homePlayers
+                        .map((p) => p.name)
+                        .join(' & '),
+                    awayNames: state.currentGame!.awayPlayers
+                        .map((p) => p.name)
+                        .join(' & '),
+                    homeScore:
+                        (state.lastGameResult?['homeScore'] as num?)?.toInt() ??
+                        0,
+                    awayScore:
+                        (state.lastGameResult?['awayScore'] as num?)?.toInt() ??
+                        0,
+                    setScores:
+                        (state.lastGameResult?['setScores'] as List<dynamic>?)
+                            ?.map((s) => Map<String, int>.from(s as Map))
+                            .toList() ??
+                        [],
+                    nextHomeNames: state.matchType == MatchType.singles
+                        ? state.nextGame?.homePlayers.first.name
+                        : state.nextGame?.homePlayers
+                              .map((p) => p.name)
+                              .join(' & '),
+                    nextAwayNames: state.matchType == MatchType.singles
+                        ? state.nextGame?.awayPlayers.first.name
+                        : state.nextGame?.awayPlayers
+                              .map((p) => p.name)
+                              .join(' & '),
+                    onContinue: () {
+                      context.read<MatchBloc>().add(StartNextGame());
+                    },
                   ),
-                  child: ListView(
-                    children: [
-                      const SizedBox(height: 20),
-                      if (isComplete) _finalResultHeader(state),
-
-                      if (!isComplete) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _teamBlock(
-                              homePlayers.map((p) => p.name).join(' & '),
-                              state.currentGame!.setsWonHome,
-                              Colors.blueAccent,
-                              usedTimeout: state.currentGame!.homeTimeoutUsed,
-                            ),
-                            Expanded(child: _gameInfo(state)),
-                            _teamBlock(
-                              awayPlayers.map((p) => p.name).join(' & '),
-                              state.currentGame!.setsWonAway,
-                              Colors.redAccent,
-                              usedTimeout: state.currentGame!.awayTimeoutUsed,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
-                        state.isTimeoutActive
-                            ? _timeoutTimer(state)
-                            : state.isBreakActive
-                            ? _breakTimer(state)
-                            : const SizedBox.shrink(),
-                        const SizedBox(height: 15),
-                        _mainScoreboard(state),
-                        const SizedBox(height: 10),
-                        _setScores(state),
-                        const SizedBox(height: 10),
-                        _matchOverviewFooter(state),
-                        const SizedBox(height: 20),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (state.isTransitioning && state.isNextGameReady)
-                ScoreTransitionOverlay(
-                  gameNumber: state.currentGame!.order,
-                  totalGames: state.games.length,
-                  homeNames: state.currentGame!.homePlayers
-                      .map((p) => p.name)
-                      .join(' & '),
-                  awayNames: state.currentGame!.awayPlayers
-                      .map((p) => p.name)
-                      .join(' & '),
-                  homeScore:
-                      (state.lastGameResult?['homeScore'] as num?)?.toInt() ??
-                      0,
-                  awayScore:
-                      (state.lastGameResult?['awayScore'] as num?)?.toInt() ??
-                      0,
-                  setScores:
-                      (state.lastGameResult?['setScores'] as List<dynamic>?)
-                          ?.map((s) => Map<String, int>.from(s as Map))
-                          .toList() ??
-                      [],
-                  nextHomeNames: state.matchType == MatchType.singles
-                      ? state.nextGame?.homePlayers.first.name
-                      : state.nextGame?.homePlayers
-                            .map((p) => p.name)
-                            .join(' & '),
-                  nextAwayNames: state.matchType == MatchType.singles
-                      ? state.nextGame?.awayPlayers.first.name
-                      : state.nextGame?.awayPlayers
-                            .map((p) => p.name)
-                            .join(' & '),
-                  onContinue: () {
-                    context.read<MatchBloc>().add(StartNextGame());
-                  },
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -290,6 +163,12 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
 
   Widget _breakTimer(MatchState state) {
     final remainingTime = state.remainingBreakTime ?? Duration.zero;
+
+    // Ensure remaining time is valid
+    if (remainingTime.isNegative) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         Text(
@@ -404,18 +283,49 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
     Color color, {
     bool usedTimeout = false,
   }) {
+    // Highlight the name if this team won the last set and we're in a break
+    final MatchState? state = context.findAncestorWidgetOfExactType<BlocBuilder<MatchBloc, MatchState>>()?.builder != null
+        ? BlocProvider.of<MatchBloc>(context).state
+        : null;
+    bool highlightName = false;
+    if (state != null && state.isBreakActive && state.currentGame != null && state.currentGame!.sets.length > 1) {
+      final lastCompletedSet = state.currentGame!.sets.lastWhereOrNull(
+        (s) =>
+            (s.home >= state.pointsToWin || s.away >= state.pointsToWin) &&
+            (s.home - s.away).abs() >= 2,
+      );
+      if (lastCompletedSet != null) {
+        if (color == Colors.blueAccent && lastCompletedSet.home > lastCompletedSet.away) highlightName = true;
+        if (color == Colors.redAccent && lastCompletedSet.away > lastCompletedSet.home) highlightName = true;
+      }
+    }
+    final winnerDecoration = BoxDecoration(
+      border: Border.all(color: color, width: 4),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: color.withOpacity(0.4),
+          blurRadius: 15,
+          spreadRadius: 5,
+        ),
+      ],
+    );
     return Column(
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              name,
-              style: GoogleFonts.oswald(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: color,
-                letterSpacing: 1.1,
+            Container(
+              decoration: highlightName ? winnerDecoration : null,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Text(
+                name,
+                style: GoogleFonts.oswald(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: 1.1,
+                ),
               ),
             ),
             if (usedTimeout)
@@ -462,6 +372,8 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       }
     }
 
+    // During a break, do not highlight the score as winner
+    final highlightScore = !state.isBreakActive;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white10.withAlpha(5),
@@ -476,13 +388,13 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
             score: state.currentSet!.home,
             color: Colors.blueAccent,
             isServing: isHomeServing,
-            isWinner: homeWonLastSet == true,
+            isWinner: highlightScore && homeWonLastSet == true,
           ),
           _scoreColumn(
             score: state.currentSet!.away,
             color: Colors.redAccent,
             isServing: isAwayServing,
-            isWinner: homeWonLastSet == false,
+            isWinner: highlightScore && homeWonLastSet == false,
           ),
         ],
       ),
@@ -549,7 +461,15 @@ class _ScoreboardDisplayScreenState extends State<ScoreboardDisplayScreen> {
       return isSetFinished && (isComplete || set != state.currentSet);
     }).toList();
 
-    if (completedSets.isEmpty) return const SizedBox(height: 60);
+    // Ensure at least one set is displayed to avoid empty UI
+    if (completedSets.isEmpty) {
+      return const Center(
+        child: Text(
+          "No completed sets yet",
+          style: TextStyle(color: Colors.white54, fontSize: 16),
+        ),
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

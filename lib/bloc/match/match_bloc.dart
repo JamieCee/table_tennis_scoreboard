@@ -106,16 +106,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     }
   }
 
-  void _initRules() {
-    if (matchType == MatchType.handicap) {
-      pointsToWin = 21;
-      servesPerTurn = 5;
-    } else {
-      pointsToWin = 11;
-      servesPerTurn = 2;
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Firestore listener
   // ---------------------------------------------------------------------------
@@ -376,7 +366,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     // --- End Boilerplate ---
 
     // --- Step 1: Check if the CURRENT GAME is over ---
-    // Count how many sets each player has won *in this game*.
     int setsWonHomeInGame = 0;
     int setsWonAwayInGame = 0;
     for (var set in updatedGame.sets) {
@@ -392,30 +381,26 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
     if (homeWonGame || awayWonGame) {
       // ---- GAME IS OVER ----
-      // Update the total match score
       int totalMatchGamesWonHome =
           currentState.matchGamesWonHome + (homeWonGame ? 1 : 0);
       int totalMatchGamesWonAway =
           currentState.matchGamesWonAway + (awayWonGame ? 1 : 0);
 
-      // If it's a team match, check if we should move to the next game
       if (currentState.matchType == MatchType.team) {
         final nextGameIndex = gameIndex + 1;
         if (nextGameIndex < updatedGames.length) {
-          // There's another game in the team match, prepare for it.
           return currentState.copyWith(
             games: updatedGames,
             currentGame: updatedGames[nextGameIndex],
             currentSet: updatedGames[nextGameIndex].sets.first,
             matchGamesWonHome: totalMatchGamesWonHome,
             matchGamesWonAway: totalMatchGamesWonAway,
-            isBreakActive: true, // Start a break between games
-            remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
+            isBreakActive: true, // Start break immediately
+            remainingBreakTime: Duration(seconds: TableTennisConfig.breakTimer),
           );
         }
       }
 
-      // If it's NOT a team match OR it was the LAST game of a team match, the MATCH is over.
       return currentState.copyWith(
         games: updatedGames,
         currentGame: updatedGame,
@@ -424,31 +409,30 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         isMatchOver: true,
         isBreakActive: false,
       );
-    } else {
-      // ---- GAME IS NOT OVER, START NEXT SET ----
-      final nextSet = SetScore(
-        home: currentState.matchType == MatchType.handicap
-            ? home.startingPoints
-            : 0,
-        away: currentState.matchType == MatchType.handicap
-            ? away.startingPoints
-            : 0,
-      );
-
-      // Add the new set to the current game
-      final gameForNextSet = updatedGame.copyWith(
-        sets: [...updatedGame.sets, nextSet],
-      );
-      updatedGames[gameIndex] = gameForNextSet;
-
-      return currentState.copyWith(
-        games: updatedGames,
-        currentGame: gameForNextSet,
-        currentSet: nextSet,
-        isBreakActive: true, // Start break between sets
-        remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
-      );
     }
+
+    // --- GAME IS NOT OVER, START NEXT SET ---
+    final nextSet = SetScore(
+      home: currentState.matchType == MatchType.handicap
+          ? home.startingPoints
+          : 0,
+      away: currentState.matchType == MatchType.handicap
+          ? away.startingPoints
+          : 0,
+    );
+
+    final gameForNextSet = updatedGame.copyWith(
+      sets: [...updatedGame.sets, nextSet],
+    );
+    updatedGames[gameIndex] = gameForNextSet;
+
+    return currentState.copyWith(
+      games: updatedGames,
+      currentGame: gameForNextSet,
+      currentSet: nextSet,
+      isBreakActive: true, // Start break immediately
+      remainingBreakTime: Duration(seconds: TableTennisConfig.breakTimer),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -490,10 +474,13 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   // Break / Timeout
   // ---------------------------------------------------------------------------
   void _onStartBreak(StartBreak e, Emitter<MatchState> emit) {
+    // Debugging log
+    print("Break started: Setting remaining break time to ${TableTennisConfig.breakTimer} seconds");
+
     emit(
       state.copyWith(
         isBreakActive: true,
-        remainingBreakTime: Duration(seconds: TableTennisConfig.setBreak),
+        remainingBreakTime: Duration(seconds: TableTennisConfig.breakTimer),
       ),
     );
     _startBreakTimer();
@@ -502,7 +489,12 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
   void _onBreakTicked(_BreakTicked e, Emitter<MatchState> emit) {
     final remaining = state.remainingBreakTime;
+
+    // Debugging log
+    print("Break ticked: Remaining time is ${remaining?.inSeconds ?? 0} seconds");
+
     if (remaining == null || remaining.inSeconds <= 1) {
+      print("Break ended: Remaining time is ${remaining?.inSeconds ?? 0} seconds");
       add(EndBreak()); // This is now safe, as we are in a proper event handler
     } else {
       emit(
@@ -516,8 +508,24 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
   void _onEndBreak(EndBreak e, Emitter<MatchState> emit) {
     _breakTimer?.cancel(); // Important: cancel the timer
+
+    // Debugging log
+    print("Break timer cancelled and state updated to inactive.");
+
     emit(state.copyWith(isBreakActive: false, remainingBreakTime: null));
     _push();
+  }
+
+  void _startBreakTimer() {
+    _breakTimer?.cancel();
+
+    // Debugging log
+    print("Starting break timer with periodic ticks.");
+
+    // The timer's ONLY job is to add a `_BreakTicked` event every second.
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      add(_BreakTicked());
+    });
   }
 
   void _onStartTimeout(StartTimeout e, Emitter<MatchState> emit) {
@@ -569,14 +577,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   // ---------------------------------------------------------------------------
   // Timers
   // ---------------------------------------------------------------------------
-  void _startBreakTimer() {
-    _breakTimer?.cancel();
-    // The timer's ONLY job is to add a `_BreakTicked` event every second.
-    _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      add(_BreakTicked());
-    });
-  }
-
   void _startTimeoutTimer() {
     // No longer needs parameters
     _timeoutTimer?.cancel();

@@ -1,14 +1,3 @@
-// class Player {
-//   final String name;
-//   Player(this.name);
-//
-//   Map<String, dynamic> toMap() => {'name': name};
-//   factory Player.fromMap(Map<String, dynamic> map) => Player(map['name']);
-//
-//   @override
-//   String toString() => name;
-// }
-
 import 'package:equatable/equatable.dart';
 
 class Player extends Equatable {
